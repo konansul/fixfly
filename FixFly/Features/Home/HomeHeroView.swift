@@ -1,17 +1,14 @@
-//
-//  HomeHeroView.swift
-//  FixFly
-//
-//  Created by Kanan Sultanov on 14.03.26.
-//
-
 import SwiftUI
+import Combine
 
 struct HeroHeaderRemote: View {
     let heroItems: [HeroMediaItemDTO]
+    var onItemTap: ((HeroMediaItemDTO) -> Void)? = nil
 
     @State private var selectedIndex = 0
     @State private var dragX: CGFloat = 0
+    
+    private let timer = Timer.publish(every: 3.0, on: .main, in: .common).autoconnect()
 
     private let heroHeight: CGFloat = 300
 
@@ -20,17 +17,17 @@ struct HeroHeaderRemote: View {
             let width = geo.size.width
 
             ZStack(alignment: .bottom) {
-                if heroItems.isEmpty {
-                    heroFallback
-                        .frame(height: heroHeight)
-                } else {
+                if !heroItems.isEmpty {
                     ZStack {
                         ForEach(Array(heroItems.enumerated()), id: \.element.id) { index, item in
                             HeroMediaPage(item: item)
                                 .frame(width: width, height: heroHeight)
                                 .clipped()
                                 .offset(x: xOffset(for: index, width: width))
-                                .allowsHitTesting(false)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    onItemTap?(item)
+                                }
                         }
                     }
 
@@ -87,7 +84,8 @@ struct HeroHeaderRemote: View {
                 LinearGradient(
                     colors: [
                         Color.black.opacity(0.0),
-                        Color.black.opacity(0.55),
+                        Color.black.opacity(0.35),
+                        Color.black.opacity(0.65),
                         Color.black
                     ],
                     startPoint: .center,
@@ -98,25 +96,16 @@ struct HeroHeaderRemote: View {
             .clipped()
         }
         .frame(height: heroHeight)
+        .onReceive(timer) { _ in
+            guard heroItems.count > 1, dragX == 0 else { return }
+            withAnimation(.spring(response: 0.42, dampingFraction: 0.90)) {
+                selectedIndex = (selectedIndex + 1) % heroItems.count
+            }
+        }
     }
 
     private func xOffset(for index: Int, width: CGFloat) -> CGFloat {
         CGFloat(index - selectedIndex) * width + dragX
-    }
-
-    private var heroFallback: some View {
-        Rectangle()
-            .fill(Color.white.opacity(0.08))
-            .overlay(
-                VStack(spacing: 8) {
-                    Image(systemName: "photo")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.7))
-                    Text("Hero loading")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.6))
-                }
-            )
     }
 }
 
@@ -126,7 +115,8 @@ private struct HeroMediaPage: View {
     var body: some View {
         ZStack {
             switch item.mediaType {
-            case .video:
+                
+            case "video":
                 if let url = URL(string: item.mediaUrl) {
                     LoopingVideoView(url: url, isActive: true)
                         .allowsHitTesting(false)
@@ -134,7 +124,7 @@ private struct HeroMediaPage: View {
                     fallback
                 }
 
-            case .image:
+            case "image":
                 if let url = URL(string: item.mediaUrl) {
                     AsyncImage(url: url) { phase in
                         switch phase {
@@ -143,13 +133,16 @@ private struct HeroMediaPage: View {
                                 .resizable()
                                 .scaledToFill()
                         default:
-                            fallback
+                            Color.clear
                         }
                     }
                     .allowsHitTesting(false)
                 } else {
                     fallback
                 }
+                
+            default:
+                fallback
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -157,12 +150,6 @@ private struct HeroMediaPage: View {
     }
 
     private var fallback: some View {
-        Rectangle()
-            .fill(Color.white.opacity(0.08))
-            .overlay(
-                Image(systemName: "photo")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.65))
-            )
+        Color.clear
     }
 }

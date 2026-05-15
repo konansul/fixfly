@@ -6,6 +6,10 @@
 	<string>686651475032-ghtpst9teanms65e51i92er7vt2us62v.apps.googleusercontent.com</string>
 	<key>GIDServerClientID</key>
 	<string>686651475032-jlqg2bsuh9uiimh87v802h775iaeo8c9.apps.googleusercontent.com</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tiktok</string>
+	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

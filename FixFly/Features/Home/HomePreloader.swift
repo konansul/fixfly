@@ -1,10 +1,3 @@
-//
-//  HomePreloader.swift
-//  FixFly
-//
-//  Created by Kanan Sultanov on 14.03.26.
-//
-
 import Foundation
 import AVFoundation
 import UIKit
@@ -37,13 +30,15 @@ final class HomePreloader {
         for heroItem in home.hero.items {
             if let url = URL(string: heroItem.mediaUrl) {
                 switch heroItem.mediaType {
-                case .image:
+                case "image":
                     images.append(url)
-                case .video:
+                case "video":
                     videos.append(url)
                     if let poster = heroItem.posterUrl, let posterURL = URL(string: poster) {
                         images.append(posterURL)
                     }
+                default:
+                    break // Если тип неизвестен, просто пропускаем
                 }
             }
         }
@@ -74,6 +69,8 @@ final class HomePreloader {
                     if let poster = item.posterUrl, let posterURL = URL(string: poster) {
                         images.append(posterURL)
                     }
+                default:
+                    break
                 }
             }
         }

@@ -4,11 +4,16 @@ struct MyGenerationsView: View {
     @StateObject private var vm = MyGenerationsViewModel()
     @State private var selectedItemForCompare: GenerationItemDTO?
     @State private var showSettings = false
+    @State private var showCoinsSheet = false
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
         GridItem(.flexible(), spacing: 12)
     ]
+
+    private var successfulItems: [GenerationItemDTO] {
+        vm.items.filter { $0.status == "done" }
+    }
 
     var body: some View {
         NavigationStack {
@@ -18,42 +23,54 @@ struct MyGenerationsView: View {
                     .allowsHitTesting(false)
 
                 VStack(spacing: 0) {
-                    titleSection
-
                     if vm.isLoading && vm.items.isEmpty {
                         loadingView
                     } else if let errorText = vm.errorText, vm.items.isEmpty {
                         errorView(errorText)
                     } else {
-                        let successfulItems = vm.items.filter { $0.status == "done" }
-                        
                         if successfulItems.isEmpty && !vm.isLoading {
                             emptyView
                         } else {
                             ScrollView(showsIndicators: false) {
+                                titleSection
+                                
                                 LazyVGrid(columns: columns, spacing: 14) {
                                     ForEach(successfulItems) { item in
                                         Button {
-                                            guard let outUrl = item.outputUrl, outUrl.count > 25 else {
-                                                return
-                                            }
+                                            guard let outUrl = item.outputUrl, outUrl.count > 25 else { return }
+                                            
+                                            vm.markAsViewed(item.id)
                                             selectedItemForCompare = item
                                         } label: {
-                                            GenerationGridCard(
-                                                item: item,
-                                                formattedDate: vm.formattedDate(item.createdAt),
-                                                featureTitle: getDisplayTitle(for: item)
-                                            )
+                                            ZStack(alignment: .topTrailing) {
+                                                GenerationGridCard(
+                                                    item: item,
+                                                    formattedDate: vm.formattedDate(item.createdAt),
+                                                    featureTitle: getDisplayTitle(for: item)
+                                                )
+                                                
+                                                if vm.isNew(item.id) {
+                                                    RecentBadge()
+                                                        .padding(6)
+                                                }
+                                            }
                                         }
                                         .buttonStyle(.plain)
+                                        .transition(.scale.combined(with: .opacity))
                                     }
                                 }
+                                .id(vm.refreshId)
                                 .padding(.horizontal, 16)
                                 .padding(.bottom, 24)
                             }
                         }
                     }
                 }
+            }
+            .sheet(isPresented: $showCoinsSheet) {
+                CoinsWalletSheetView()
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -67,7 +84,12 @@ struct MyGenerationsView: View {
                 }
                 
                 ToolbarItem(placement: .topBarTrailing) {
-                    CoinsBadge()
+                    Button {
+                        showCoinsSheet = true
+                    } label: {
+                        CoinsBadge()
+                    }
+                    .buttonStyle(.plain)
                 }
             }
             .navigationDestination(item: $selectedItemForCompare) { selectedItem in
@@ -75,13 +97,18 @@ struct MyGenerationsView: View {
                               selectedItem.outputUrl?.lowercased().hasSuffix(".mov") == true
                 
                 if isVideo, let outStr = selectedItem.outputUrl, let videoURL = URL(string: outStr) {
-                    VideoResultView(videoURL: videoURL)
-                        .toolbar(.hidden, for: .tabBar)
+                    VideoResultView(title: getDisplayTitle(for: selectedItem), videoURL: videoURL) {
+                        Task { await vm.deleteGeneration(taskId: selectedItem.id) }
+                    }
+                    .toolbar(.hidden, for: .tabBar)
                 } else {
                     ResultCompareView(
+                        title: getDisplayTitle(for: selectedItem),
                         beforeURL: selectedItem.inputUrl,
                         afterURL: selectedItem.outputUrl ?? ""
-                    )
+                    ) {
+                        Task { await vm.deleteGeneration(taskId: selectedItem.id) }
+                    }
                     .toolbar(.hidden, for: .tabBar)
                 }
             }
@@ -90,11 +117,18 @@ struct MyGenerationsView: View {
             }
             .onAppear {
                 Task {
-                    await vm.load(force: true)
+                    if vm.items.isEmpty {
+                        await vm.load(force: false)
+                    }
                 }
             }
             .refreshable {
                 await vm.load(force: true)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .generationNeedsRefresh)) { _ in
+                Task {
+                    await vm.load(force: true)
+                }
             }
         }
     }
@@ -116,23 +150,54 @@ struct MyGenerationsView: View {
     }
 
     private func getDisplayTitle(for item: GenerationItemDTO) -> String {
+        if item.featureKey == "nano_banana_image" || item.featureKey == "prompt_to_image" {
+            if let meta = item.requestMeta, let styleValue = meta["style"] {
+                switch styleValue {
+                case .string(let name):
+                    return name == "None" ? "Custom Photo" : formatStyleName(name)
+                default:
+                    return "AI Photo"
+                }
+            }
+            return "AI Photo"
+        }
+        
+        if item.featureKey == "prompt_to_video" {
+            if let meta = item.requestMeta, let styleValue = meta["style"] {
+                switch styleValue {
+                case .string(let name):
+                    return name == "None" ? "Custom Video" : formatStyleName(name)
+                default:
+                    break
+                }
+            }
+            return "AI Video"
+        }
+
         if item.featureKey == "template_to_video" {
-            if let meta = item.requestMeta as? [String: StringOrIntOrDoubleOrBool],
-               let styleId = meta["style_id"]?.description {
-                return styleId.capitalized
+            if let meta = item.requestMeta, let styleIdValue = meta["style_id"] {
+                return formatStyleName(styleIdValue.description)
             }
             return "Video Template"
         }
-        if item.featureKey == "prompt_to_video" { return "Custom Video" }
-        if item.featureKey == "prompt_to_image" { return "Custom Image" }
+        
         return vm.featureTitle(item.featureKey)
+    }
+
+    private func formatStyleName(_ name: String) -> String {
+        if name.lowercased() == "none" { return "Custom Generation" }
+        
+        return name
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(of: "-", with: " ")
+            .capitalized
     }
 
     private var loadingView: some View {
         VStack(spacing: 14) {
             Spacer()
             ProgressView().tint(.white).scaleEffect(1.1)
-            Text("Loading your generations...")
+            Text("Loading...")
                 .foregroundStyle(.white.opacity(0.8))
                 .font(.system(size: 15, weight: .medium))
             Spacer()
@@ -159,5 +224,31 @@ struct MyGenerationsView: View {
             Text("Your processed photos will appear here.").font(.system(size: 14)).foregroundStyle(.white.opacity(0.7))
             Spacer()
         }
+    }
+}
+
+struct RecentBadge: View {
+    var body: some View {
+        Text("NEW")
+            .font(.system(size: 14, weight: .black))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 3)
+//            .background(Color("backgroundcolor"))
+            .background(
+                LinearGradient(colors: [.purple, .pink], startPoint: .leading, endPoint: .trailing)
+            )
+//            .background(
+//                LinearGradient(
+//                    colors: [
+//                        Color(red: 0.4, green: 0.0, blue: 0.8),
+//                        Color(red: 0.1, green: 0.2, blue: 0.8)
+//                    ],
+//                    startPoint: .leading,
+//                    endPoint: .trailing
+//                )
+//            )
+            .clipShape(Capsule())
+            .shadow(radius: 2)
     }
 }

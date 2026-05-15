@@ -1,15 +1,10 @@
-//
-//  VideoResultView.swift
-//  FixFly
-//
-//  Created by Kanan Sultanov on 21.03.26.
-//
-
 import SwiftUI
 import AVKit
 
 struct VideoResultView: View {
+    let title: String?
     let videoURL: URL
+    var onDelete: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = ResultCompareViewModel()
@@ -18,83 +13,127 @@ struct VideoResultView: View {
     @State private var player: AVQueuePlayer?
     @State private var looper: AVPlayerLooper?
     @State private var isMuted = false
+    @State private var showSuccessCheck = false
+    @State private var localVideoURL: URL?
+    
+    @State private var videoAspectRatio: CGFloat? = nil
+
+    init(title: String? = nil, videoURL: URL, onDelete: (() -> Void)? = nil) {
+        self.title = title
+        self.videoURL = videoURL
+        self.onDelete = onDelete
+    }
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
-            
-            if let player = player {
-                FullScreenVideoPlayerView(player: player)
-                    .ignoresSafeArea()
-            }
-        }
-        .overlay {
-            VStack(spacing: 0) {
-                Spacer()
+            FixFlyBackground(imageName: "fixfly_bg")
+                .ignoresSafeArea()
 
-                VStack(spacing: 0) {
-                    HStack {
-                        Spacer()
-                        Button {
-                            isMuted.toggle()
-                            player?.isMuted = isMuted
-                        } label: {
-                            Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(.white)
-                                .frame(width: 44, height: 44)
-                                .background(.ultraThinMaterial, in: Circle())
-                                .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 24) {
+                    
+                    if let player = player, let ratio = videoAspectRatio {
+                        videoBlock(player: player, ratio: ratio)
+                            .padding(.horizontal, 16)
+                            .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                    } else {
+                        VStack {
+                            Spacer(minLength: 100)
+                            ProgressView()
+                                .tint(.white)
+                                .scaleEffect(1.2)
+                            Spacer(minLength: 100)
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 20)
 
-                    Button { showShare = true } label: {
-                        Text("Share")
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 56)
-                            .background(accentGradient)
-                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal, 16)
-
-                    shareSection
+                    actionButtons
                         .padding(.horizontal, 16)
-                        .padding(.top, 20)
-                        .padding(.bottom, 24)
+
+                    ShareResultSection(
+                        onDownloadTap: {
+                            Task { await viewModel.saveResult(from: .remote(videoURL.absoluteString)) }
+                        },
+                        onShareTap: { platform in
+                            prepareAndShareVideo()
+                        }
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 24)
+                }
+            }
+            
+            if showSuccessCheck {
+                ZStack {
+                    Color.black.opacity(0)
+                        .ignoresSafeArea()
+                    
+                    VStack {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 56, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                    .frame(width: 120, height: 120)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Circle())
+                    .shadow(color: .black.opacity(0.2), radius: 20)
+                    .offset(y: -60)
+                }
+                .zIndex(100)
+                .transition(.scale(scale: 0.8).combined(with: .opacity))
+            }
+        }
+        .navigationTitle(title ?? "Video Result")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .onChange(of: viewModel.toast) { oldValue, newValue in
+            if newValue == "SUCCESS_ACTION" {
+                let generator = UINotificationFeedbackGenerator()
+                generator.notificationOccurred(.success)
+                
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                    showSuccessCheck = true
+                }
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showSuccessCheck = false
+                        viewModel.toast = nil
+                    }
                 }
             }
         }
         .sheet(isPresented: $showShare) {
-            ActivityView(activityItems: viewModel.shareItems(for: .remote(videoURL.absoluteString)))
-                .presentationDetents([.medium, .large])
+            if let url = localVideoURL {
+                ActivityView(activityItems: [url])
+                    .presentationDetents([.medium, .large])
+            }
         }
         .onAppear {
             setupPlayer()
+            calculateAspectRatio()
         }
         .onDisappear {
             player?.pause()
         }
-        .navigationTitle("Result")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
-        
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button {
                         Task { await viewModel.saveResult(from: .remote(videoURL.absoluteString)) }
-                    } label: {
-                        Label("Save to Photos", systemImage: "square.and.arrow.down")
-                    }
+                    } label: { Label("Save to Photos", systemImage: "square.and.arrow.down") }
 
-                    Button { showShare = true } label: {
+                    Button { prepareAndShareVideo() } label: {
                         Label("Share", systemImage: "square.and.arrow.up")
+                    }
+                    
+                    if let onDelete = onDelete {
+                        Button(role: .destructive) {
+                            onDelete()
+                            dismiss()
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                                .foregroundStyle(.red)
+                        }
                     }
                 } label: {
                     Image(systemName: "ellipsis")
@@ -105,16 +144,30 @@ struct VideoResultView: View {
         }
     }
 
-    private func setupPlayer() {
-        let item = AVPlayerItem(url: videoURL)
-        let queue = AVQueuePlayer(playerItem: item)
-
-        self.looper = AVPlayerLooper(player: queue, templateItem: item)
-
-        queue.isMuted = isMuted
-        queue.play()
-
-        self.player = queue
+    private func videoBlock(player: AVPlayer, ratio: CGFloat) -> some View {
+        ZStack(alignment: .bottomTrailing) {
+            FullScreenVideoPlayerView(player: player)
+                .aspectRatio(ratio, contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            
+            Button {
+                isMuted.toggle()
+                self.player?.isMuted = isMuted
+            } label: {
+                Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 40, height: 40)
+                    .background(.ultraThinMaterial, in: Circle())
+                    .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
+            }
+            .padding(14)
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.white.opacity(0.10), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
     }
 
     private var accentGradient: LinearGradient {
@@ -128,40 +181,83 @@ struct VideoResultView: View {
         )
     }
 
-    private var shareSection: some View {
-        VStack(spacing: 16) {
-            Text("Share to")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.82))
+    private var actionButtons: some View {
+        Button { prepareAndShareVideo() } label: {
+            Text("Share")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 58)
+                .background(accentGradient)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(videoAspectRatio == nil)
+        .opacity(videoAspectRatio == nil ? 0.5 : 1.0)
+    }
 
-            HStack(spacing: 22) {
-                shareButton(icon: "arrow.down", title: "Download") {
-                    Task { await viewModel.saveResult(from: .remote(videoURL.absoluteString)) }
+    private func prepareAndShareVideo() {
+        Task {
+            if localVideoURL != nil {
+                showShare = true
+                return
+            }
+            
+            do {
+                let (tempURL, _) = try await URLSession.shared.download(from: videoURL)
+                let docs = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+                let destinationURL = docs.appendingPathComponent("fixfly_share_\(UUID().uuidString).mp4")
+                
+                try? FileManager.default.removeItem(at: destinationURL)
+                try FileManager.default.moveItem(at: tempURL, to: destinationURL)
+                
+                await MainActor.run {
+                    self.localVideoURL = destinationURL
+                    self.showShare = true
                 }
-                shareButton(icon: "music.note", title: "TikTok") { showShare = true }
-                shareButton(icon: "play.rectangle.fill", title: "YouTube") { showShare = true }
-                shareButton(icon: "camera.fill", title: "Instagram") { showShare = true }
-                shareButton(icon: "xmark", title: "X") { showShare = true }
+            } catch {
+                print("Silent fail for share preparation")
             }
         }
     }
 
-    private func shareButton(icon: String, title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            VStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 19, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 50, height: 50)
-                    .background(Color.white.opacity(0.15))
-                    .clipShape(Circle())
+    private func setupPlayer() {
+        let item = AVPlayerItem(url: videoURL)
+        let queue = AVQueuePlayer(playerItem: item)
+        self.looper = AVPlayerLooper(player: queue, templateItem: item)
+        queue.isMuted = isMuted
+        queue.play()
+        self.player = queue
+    }
 
-                Text(title)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.9))
+    private func calculateAspectRatio() {
+        let asset = AVURLAsset(url: videoURL)
+        Task {
+            do {
+                let tracks = try await asset.loadTracks(withMediaType: .video)
+                if let videoTrack = tracks.first {
+                    let size = try await videoTrack.load(.naturalSize)
+                    let transform = try await videoTrack.load(.preferredTransform)
+                    
+                    let isPortrait = abs(transform.b) == 1.0 || abs(transform.c) == 1.0
+                    
+                    await MainActor.run {
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            if isPortrait {
+                                self.videoAspectRatio = size.height / size.width
+                            } else {
+                                self.videoAspectRatio = size.width / size.height
+                            }
+                        }
+                    }
+                }
+            } catch {
+                print("Failed to load video dimensions: \(error)")
+                await MainActor.run {
+                    withAnimation { self.videoAspectRatio = 9/16 }
+                }
             }
         }
-        .buttonStyle(.plain)
     }
 }
 
@@ -171,7 +267,7 @@ fileprivate class VideoPlayerUIView: UIView {
     init(player: AVPlayer) {
         super.init(frame: .zero)
         playerLayer.player = player
-        playerLayer.videoGravity = .resizeAspectFill
+        playerLayer.videoGravity = .resizeAspect
         layer.addSublayer(playerLayer)
     }
     

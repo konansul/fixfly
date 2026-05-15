@@ -8,18 +8,23 @@ struct TemplateFeedView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var showPhotoPicker = false
+    @State private var showGuidelinesSheet = false
 
     @State private var selectedImage: UIImage?
-    @State private var resultUIImage: UIImage?
+    @State private var finalResultImageUrl: String?
     @State private var resultVideoURL: URL?
     
-    @State private var isProcessing = false
+    @State private var processingTaskId: String?
+    
+    @State private var isUploading = false
     @State private var errorMessage: String?
     @State private var showResult = false
     
     @State private var scrollPosition: String?
     @State private var activeTemplate: RemoteCardItem?
     @State private var showCoinsSheet = false
+    
+    @State private var showPaywall = false
 
     init(templates: [RemoteCardItem], sectionId: String, currentIndex: Int) {
         self.templates = templates
@@ -53,9 +58,9 @@ struct TemplateFeedView: View {
             }
             .scrollTargetBehavior(.paging)
             .scrollPosition(id: $scrollPosition)
-            .onChange(of: scrollPosition) { newId in
+            .onChange(of: scrollPosition) { oldValue, newId in
                 if let newId = newId, let found = templates.first(where: { $0.id == newId }) {
-                    withAnimation {
+                    withAnimation(.easeInOut(duration: 0.15)) {
                         activeTemplate = found
                     }
                 }
@@ -71,28 +76,66 @@ struct TemplateFeedView: View {
                 }
             }
 
-            if isProcessing {
-                processingOverlay
+            if isUploading {
+                ZStack {
+                    Color.black.opacity(0.6).ignoresSafeArea()
+                    VStack(spacing: 12) {
+                        ProgressView()
+                            .tint(.white)
+                        Text("Uploading...")
+                            .foregroundStyle(.white)
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                }
             }
+        }
+        .sheet(isPresented: $showGuidelinesSheet) {
+            PhotoGuidelinesSheetView {
+                showPhotoPicker = true
+            }
+            .presentationDetents([.fraction(0.65)])
+            .presentationDragIndicator(.visible)
+            .ignoresSafeArea(.all)
         }
         .sheet(isPresented: $showPhotoPicker) {
             ImagePicker(sourceType: .photoLibrary) { image in
                 self.selectedImage = image
-                Task { await processImage(image) }
+                Task { await startGeneration(image) }
             }
             .ignoresSafeArea()
+        }
+        .sheet(item: $processingTaskId) { taskId in
+            PhotoProcessingView(taskId: taskId, onComplete: { outputUrl in
+                self.processingTaskId = nil
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    NotificationCenter.default.post(name: .generationNeedsRefresh, object: nil)
+                    if self.activeTemplate?.actualResultType == .video {
+                        self.resultVideoURL = URL(string: outputUrl)
+                    } else {
+                        self.finalResultImageUrl = outputUrl
+                    }
+                    self.showResult = true
+                }
+            })
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showCoinsSheet) {
             CoinsWalletSheetView()
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+                .presentationDragIndicator(.visible)
+        }
         .navigationDestination(isPresented: $showResult) {
             if let videoURL = resultVideoURL {
                 VideoResultView(videoURL: videoURL)
                     .toolbar(.hidden, for: .tabBar)
-            } else if let before = selectedImage, let after = resultUIImage {
-                ResultCompareView(before: before, after: after)
+            } else if let before = selectedImage, let afterUrl = finalResultImageUrl {
+                ResultCompareView(title: "", before: before, afterURL: afterUrl)
                     .toolbar(.hidden, for: .tabBar)
             } else {
                 Color.black.ignoresSafeArea()
@@ -117,16 +160,9 @@ struct TemplateFeedView: View {
                 Button {
                     showCoinsSheet = true
                 } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "bitcoinsign.circle.fill")
-                            .font(.system(size: 16))
-                            .foregroundStyle(.yellow)
-
-                        Text("\(WalletManager.shared.coins)")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(.white)
-                    }
+                    CoinsBadge()
                 }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -160,21 +196,31 @@ struct TemplateFeedView: View {
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .shadow(radius: 2)
+                .id(activeTemplate?.id)
 
             HStack(spacing: 12) {
-                badge(icon: activeTemplate?.mediaType == .video ? "video" : "photo",
-                      text: activeTemplate?.mediaType == .video ? "1 video" : "1 photo")
-                badge(icon: "speaker.wave.2", text: "With sound")
+                badge(icon: activeTemplate?.actualResultType == .video ? "video" : "photo",
+                      text: activeTemplate?.actualResultType == .video ? "1 video" : "1 photo")
+                
+                if activeTemplate?.actualResultType == .video {
+                    badge(icon: "speaker.wave.2", text: "With sound")
+                }
+                
                 badge(icon: "bitcoinsign.circle.fill",
-                      text: activeTemplate?.mediaType == .video ? "600 coins" : "150 coins",
+                      text: activeTemplate?.actualResultType == .video ? "600 coins" : "150 coins",
                       iconColor: .yellow)
             }
             .padding(.bottom, 10)
+            .id(activeTemplate?.id.appending("_badges"))
 
             Button {
-                showPhotoPicker = true
+                if SessionManager.shared.hasSeenPhotoGuidelinesThisSession {
+                    showPhotoPicker = true
+                } else {
+                    showGuidelinesSheet = true
+                }
             } label: {
-                Text(activeTemplate?.mediaType == .video ? "Create Video" : "Create Photo")
+                Text(activeTemplate?.actualResultType == .video ? "Create Video" : "Create Photo")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -192,15 +238,15 @@ struct TemplateFeedView: View {
                     .clipShape(Capsule())
             }
             .padding(.horizontal, 20)
-            .disabled(isProcessing)
+            .disabled(isUploading)
+            .id(activeTemplate?.id.appending("_btn"))
         }
         .padding(.bottom, 40)
     }
 
     private func badge(icon: String, text: String, iconColor: Color = .white) -> some View {
         HStack(spacing: 6) {
-            Image(systemName: icon)
-                .foregroundStyle(iconColor)
+            Image(systemName: icon).foregroundStyle(iconColor)
             Text(text)
         }
         .font(.system(size: 13, weight: .semibold))
@@ -211,95 +257,66 @@ struct TemplateFeedView: View {
         .clipShape(Capsule())
     }
 
-    private var processingOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.45).ignoresSafeArea()
-
-            VStack(spacing: 14) {
-                ProgressView()
-                    .scaleEffect(1.2)
-                    .tint(.white)
-
-                Text("Processing…")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.9))
-
-                Text("This usually takes a few seconds")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.65))
-            }
-            .padding(18)
-            .background(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(Color.white.opacity(0.08))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .stroke(Color.white.opacity(0.10), lineWidth: 1)
-                    )
-            )
-            .padding(.horizontal, 28)
-        }
-    }
-
-    private func processImage(_ input: UIImage) async {
+    private func startGeneration(_ input: UIImage) async {
         guard let template = activeTemplate else { return }
 
         await MainActor.run {
-            isProcessing = true
+            isUploading = true
             errorMessage = nil
-            resultUIImage = nil
-            resultVideoURL = nil
         }
 
-        let isVideo = (template.mediaType == .video)
-        let path = endpointPath(for: sectionId, isVideo: isVideo)
+        let isVideo = (template.actualResultType == .video)
+        let path = isVideo ? "/v1/generate-veo-video" : "/v1/generate-nano-banana"
         
         var extra: [String: String] = [:]
-        extra["style_id"] = template.styleId ?? template.id
+        extra["prompt"] = template.prompt ?? "Animate this photo beautifully"
+        extra["style"] = template.styleId ?? "None"
+        
+        let ratio = input.size.width / input.size.height
+        
+        if isVideo {
+            extra["aspect_ratio"] = ratio > 1.0 ? "16:9" : "9:16"
+            
+        } else {
+            if ratio >= 1.5 {
+                extra["aspect_ratio"] = "16:9"
+            } else if ratio >= 1.15 {
+                extra["aspect_ratio"] = "4:3"
+            } else if ratio >= 0.85 {
+                extra["aspect_ratio"] = "1:1"
+            } else if ratio >= 0.65 {
+                extra["aspect_ratio"] = "3:4"
+            } else {
+                extra["aspect_ratio"] = "9:16"
+            }
+        }
 
         do {
-            if isVideo {
-                let outputURL = try await MultipartAPI.shared.processImageToVideo(
-                    endpointPath: path,
-                    image: input,
-                    extraFields: extra
-                )
-                await WalletManager.shared.refreshBalance()
-                await MainActor.run {
-                    resultVideoURL = outputURL
-                    isProcessing = false
-                    showResult = true
-                }
-            } else {
-                let outputImage = try await MultipartAPI.shared.processImage(
-                    endpointPath: path,
-                    image: input,
-                    extraFields: extra,
-                    accept: "image/png"
-                )
-                await WalletManager.shared.refreshBalance()
-                await MainActor.run {
-                    resultUIImage = outputImage
-                    isProcessing = false
-                    showResult = true
-                }
+            let taskId = try await MultipartAPI.shared.startBackgroundGeneration(
+                endpointPath: path,
+                images: [input],
+                extraFields: extra
+            )
+
+            await WalletManager.shared.refreshBalance()
+
+            await MainActor.run {
+                isUploading = false
+                self.processingTaskId = taskId
             }
         } catch {
-            await MainActor.run {
-                errorMessage = error.localizedDescription
-                isProcessing = false
+                await MainActor.run {
+                    isUploading = false
+                    
+                    let errorString = error.localizedDescription
+                    
+                    if errorString.contains("402") || errorString.lowercased().contains("not enough coins") {
+                        showPaywall = true
+                    } else {
+                        errorMessage = "Oops! Something went wrong. Please try again."
+                    }
+                }
             }
-        }
-    }
-
-    private func endpointPath(for sectionId: String, isVideo: Bool) -> String {
-        if isVideo { return "/v1/generate-template-video" }
-        switch sectionId {
-        case "anime": return "/v1/anime-avatar"
-        case "enhance": return "/v1/enhance-photo"
-        case "restore": return "/v1/restore-old-photo"
-        default: return "/v1/anime-avatar"
-        }
     }
 }
 

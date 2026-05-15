@@ -20,7 +20,7 @@ struct HorizontalRemoteCards: View {
                         onTap(item)
                     } label: {
                         RoundedRemoteMediaCard(item: item)
-                            .allowsHitTesting(false) 
+                            .allowsHitTesting(false)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -34,6 +34,10 @@ struct HorizontalRemoteCards: View {
 
 struct RoundedRemoteMediaCard: View {
     let item: RemoteCardItem
+
+    private var displayTitle: String? {
+        return item.styleId
+    }
 
     var body: some View {
         ZStack {
@@ -79,23 +83,32 @@ struct RoundedRemoteMediaCard: View {
                 }
             }
         }
-        .frame(width: 142, height: 192)
+        .frame(width: 152, height: 202)
         .clipped()
         .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 13, style: .continuous)
                 .stroke(Color.white.opacity(0.08), lineWidth: 1)
         )
+//        .overlay(alignment: .bottomLeading) {
+//            if let name = displayTitle, name.lowercased() != "none" {
+//                Text(name.replacingOccurrences(of: "_", with: " ").capitalized)
+//                    .font(.system(size: 12, weight: .bold))
+//                    .foregroundStyle(.white)
+//                    .lineLimit(2)
+//                    .multilineTextAlignment(.leading)
+//                    .padding(.horizontal, 10)
+//                    .padding(.vertical, 6)
+//                    .background(Color.black.opacity(0.4)) // Тёмная окантовка (фон)
+//                    .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+//                    .padding(10) // Отступ от краев карточки
+//            }
+//        }
     }
 
     private var fallback: some View {
         RoundedRectangle(cornerRadius: 18, style: .continuous)
-            .fill(Color.white.opacity(0.08))
-            .overlay(
-                Image(systemName: "photo")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.6))
-            )
+            .fill(Color.black)
     }
 
     private var videoFallback: some View {
@@ -106,7 +119,6 @@ struct RoundedRemoteMediaCard: View {
                     Image(systemName: "video")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.6))
-
                 }
             )
     }

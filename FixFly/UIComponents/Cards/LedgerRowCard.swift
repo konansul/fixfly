@@ -1,10 +1,3 @@
-//
-//  LedgerRowCard.swift
-//  FixFly
-//
-//  Created by Kanan Sultanov on 14.03.26.
-//
-
 import SwiftUI
 
 struct LedgerRowView: View {
@@ -15,6 +8,7 @@ struct LedgerRowView: View {
 
     var body: some View {
         HStack(spacing: 12) {
+            // Иконка транзакции
             ZStack {
                 Circle()
                     .fill(iconBackground)
@@ -65,22 +59,44 @@ struct LedgerRowView: View {
     }
 
     private var iconName: String {
-        switch item.reason.lowercased() {
-        case "generation": return "sparkles"
-        case "purchase": return "cart.fill"
-        case "subscription": return "crown.fill"
-        case "reward": return "gift.fill"
-        default: return "bitcoinsign.circle.fill"
+        let reason = item.reason.lowercased()
+        
+        if item.amount > 0 {
+            return "bitcoinsign.circle.fill"
+        }
+        
+        switch reason {
+        case "veo_generation_start":
+            return "video.fill"
+        case "generation":
+            return "photo.fill"
+        case "purchase":
+            return "cart.fill"
+        case "subscription":
+            return "crown.fill"
+        case "reward":
+            return "gift.fill"
+        default:
+            return "sparkles"
         }
     }
 
     private var iconBackground: Color {
-        switch item.reason.lowercased() {
-        case "generation": return .purple.opacity(0.35)
-        case "purchase": return .blue.opacity(0.35)
-        case "subscription": return .orange.opacity(0.35)
-        case "reward": return .green.opacity(0.35)
-        default: return .yellow.opacity(0.30)
+        let reason = item.reason.lowercased()
+        
+        if item.amount > 0 {
+            return .yellow.opacity(0.30)
+        }
+        
+        switch reason {
+        case "veo_generation_start":
+            return .blue.opacity(0.35)
+        case "generation":
+            return .purple.opacity(0.35)
+        case "purchase":
+            return .orange.opacity(0.35)
+        default:
+            return .white.opacity(0.15)
         }
     }
 }

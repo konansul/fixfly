@@ -86,33 +86,33 @@ final class MultipartAPI {
         images: [UIImage] = [],
         extraFields: [String: String] = [:],
         requiresAuth: Bool = true
-    ) async throws -> Bool {
+    ) async throws -> String {
         
         guard let url = URL(string: ConfigAPI.baseURL + endpointPath) else {
             throw ErrorAPI.badURL
         }
-
+        
         let boundary = "Boundary-\(UUID().uuidString)"
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-
+        
         if requiresAuth {
             guard let token = TokenStore.shared.accessToken, !token.isEmpty else {
                 throw ErrorAPI.unauthorized("No access token. Please login first.")
             }
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
-
+        
         var body = Data()
-
+        
         for (key, value) in extraFields {
             body.append("--\(boundary)\r\n")
             body.append("Content-Disposition: form-data; name=\"\(key)\"\r\n\r\n")
             body.append("\(value)\r\n")
         }
-
+        
         for (index, image) in images.enumerated() {
             if let jpeg = image.jpegData(compressionQuality: 0.9) {
                 body.append("--\(boundary)\r\n")
@@ -125,10 +125,10 @@ final class MultipartAPI {
         
         body.append("--\(boundary)--\r\n")
         request.httpBody = body
-
+        
         let (data, resp) = try await URLSession.shared.data(for: request)
         guard let http = resp as? HTTPURLResponse else { throw ErrorAPI.badResponse }
-
+        
         guard (200...299).contains(http.statusCode) else {
             let message = Self.extractServerErrorMessage(from: data) ?? "Server error"
             if http.statusCode == 401 {
@@ -136,8 +136,13 @@ final class MultipartAPI {
             }
             throw ErrorAPI.http(http.statusCode, message)
         }
-
-        return true
+        
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let taskId = json["task_id"] as? String else {
+            throw ErrorAPI.badResponse
+        }
+        
+        return taskId
     }
 
     private func createMultipartRequest(

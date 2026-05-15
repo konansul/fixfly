@@ -1,95 +1,77 @@
-//
-//  CoinsWalletSheetView.swift
-//  FixFly
-//
-//  Created by Kanan Sultanov on 14.03.26.
-//
-
 import SwiftUI
 
 struct CoinsWalletSheetView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var store = WalletSheetStore()
-
     @State private var coinRotation: Double = 0
 
     var body: some View {
-        ZStack {
-            FixFlyBackground(imageName: "fixfly_bg")
+            NavigationStack {
+                ZStack {
+                    FixFlyBackground(imageName: "fixfly_bg")
 
-            Color.black.opacity(0.28)
-                .ignoresSafeArea()
+                    Color.black.opacity(0.28)
+                        .ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                topBar
+                    VStack(spacing: 0) {
+                        ScrollView(showsIndicators: false) {
+                            VStack(spacing: 10) {
+                                balanceHero
 
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 18) {
-                        balanceHero
-
-                        if let errorText = store.errorText {
-                            errorCard(errorText)
+                                // ИСПРАВЛЕННАЯ ЛОГИКА:
+                                if let errorText = store.errorText {
+                                    // 1. Если есть ошибка — показываем только её
+                                    errorCard(errorText)
+                                } else if store.isLoading && store.items.isEmpty {
+                                    // 2. Если ошибки нет и идет загрузка — показываем лоадер
+                                    loadingBlock
+                                } else if store.items.isEmpty {
+                                    // 3. Если загрузка завершена, ошибок нет, но список пуст — показываем "No transactions"
+                                    emptyBlock
+                                } else {
+                                    // 4. Во всех остальных случаях показываем список
+                                    ledgerSection
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.top, 14)
+                            .padding(.bottom, 28)
                         }
-
-                        if store.isLoading && store.items.isEmpty {
-                            loadingBlock
-                        } else if !store.isLoading && store.items.isEmpty {
-                            emptyBlock
-                        } else {
-                            ledgerSection
+                        .refreshable {
+                            Task { await store.load() }
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 14)
-                    .padding(.bottom, 28)
                 }
-                .refreshable {
-                    Task { await store.load() }
+                .navigationTitle("Wallet")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbarBackground(.hidden, for: .navigationBar)
+                .toolbarColorScheme(.dark, for: .navigationBar)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                    }
+                    
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            Task { await store.load() }
+                        } label: {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                    }
+                }
+                .task {
+                    startCoinAnimation()
+                    await store.load()
                 }
             }
-        }
-        .task {
-            startCoinAnimation()
-            await store.load()
-        }
-    }
-
-    // MARK: - Subviews
-
-    private var topBar: some View {
-        HStack {
-            Button { dismiss() } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 42, height: 42)
-                    .background(Color.white.opacity(0.10))
-                    .clipShape(Circle())
-            }
-            .buttonStyle(.plain)
-
-            Spacer()
-
-            Text("Coins")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(.white)
-
-            Spacer()
-
-            Button {
-                Task { await store.load() }
-            } label: {
-                Image(systemName: "arrow.clockwise")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 42, height: 42)
-                    .background(Color.white.opacity(0.10))
-                    .clipShape(Circle())
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 10)
     }
 
     private var balanceHero: some View {
@@ -116,7 +98,8 @@ struct CoinsWalletSheetView: View {
 
             HStack(spacing: 10) {
                 infoChip(title: "Status", value: "Active")
-                infoChip(title: "Transactions", value: "\(store.items.count)")
+                let countDisplay = store.items.count == 200 ? "200+" : "\(store.items.count)"
+                infoChip(title: "Transactions", value: countDisplay)
             }
         }
         .padding(20)
@@ -137,7 +120,7 @@ struct CoinsWalletSheetView: View {
                 .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(.white)
 
-            VStack(spacing: 10) {
+            LazyVStack(spacing: 10) {
                 ForEach(store.items) { item in
                     LedgerRowView(
                         item: item,

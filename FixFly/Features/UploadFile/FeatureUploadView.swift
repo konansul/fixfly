@@ -72,7 +72,7 @@ struct FeatureUploadView: View {
         .toolbar(.hidden, for: .navigationBar)
         .fullScreenCover(isPresented: $vm.showResult) {
             if let before = vm.selectedUIImage, let after = vm.resultUIImage {
-                ResultCompareView(before: before, after: after)
+                ResultCompareView(title: "", before: before, after: after)
             } else {
                 Color.black.ignoresSafeArea()
             }

@@ -21,6 +21,7 @@ final class PaywallViewModel: ObservableObject {
     @Published var selectedProductId: String = PaywallItemType.weeklySub.rawValue
     @Published var isPurchasing = false
     @Published var errorText: String?
+    @Published var activeSubscriptionId: String?
     
     private let store = StoreManager.shared
 
@@ -39,11 +40,13 @@ final class PaywallViewModel: ObservableObject {
 
     func loadProducts() async {
         await store.loadProductsIfNeeded()
+        await checkActiveSubscription()
     }
 
     func restore() async {
         do {
             try await store.restore()
+            await checkActiveSubscription()
         } catch {
             errorText = error.localizedDescription
         }
@@ -68,10 +71,30 @@ final class PaywallViewModel: ObservableObject {
                 try await store.buyCoins(productId: selectedProductId)
             }
             
+            await checkActiveSubscription()
             return true
         } catch {
             errorText = error.localizedDescription
             return false
         }
+    }
+    
+    private func checkActiveSubscription() async {
+        for await result in Transaction.currentEntitlements {
+            guard case .verified(let transaction) = result else { continue }
+            
+            if transaction.revocationDate != nil { continue }
+            
+            if transaction.productID == PaywallItemType.weeklySub.rawValue ||
+               transaction.productID == PaywallItemType.monthlySub.rawValue {
+                
+                self.activeSubscriptionId = transaction.productID
+                
+                self.selectedProductId = transaction.productID
+                return
+            }
+        }
+        
+        self.activeSubscriptionId = nil
     }
 }

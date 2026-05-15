@@ -1,15 +1,3 @@
-//
-//  WalletSheetStore.swift
-//  FixFly
-//
-//  Created by Kanan Sultanov on 14.03.26.
-//
-
-//
-//  WalletSheetStore.swift
-//  FixFly
-//
-
 import Foundation
 import Combine
 
@@ -20,7 +8,6 @@ final class WalletSheetStore: ObservableObject {
     @Published var isLoading = false
     @Published var errorText: String?
 
-    
     private let dateFormatterIn: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -47,7 +34,7 @@ final class WalletSheetStore: ObservableObject {
 
         do {
             async let balanceTask = WalletAPI.shared.fetchBalance()
-            async let ledgerTask = WalletAPI.shared.fetchLedger(limit: 100)
+            async let ledgerTask = WalletAPI.shared.fetchLedger(limit: 200)
 
             let (balanceValue, ledgerItems) = try await (balanceTask, ledgerTask)
 
@@ -68,22 +55,47 @@ final class WalletSheetStore: ObservableObject {
     }
 
     func reasonTitle(_ reason: String) -> String {
-        switch reason.lowercased() {
-        case "generation": return "Generation"
-        case "purchase": return "Purchase"
-        case "subscription": return "Subscription"
-        case "reward": return "Reward"
-        default: return reason.capitalized
+        switch reason {
+        case "purchase":
+            return "Coin Pack"
+        case "subscription_grant":
+            return "Subscription Bonus"
+        case "veo_generation_start":
+            return "AI Video Generation"
+        case "veo_generation_refund":
+            return "Refund: Video Failed"
+        case "generation":
+            return "AI Photo Generation"
+        case "refund":
+            return "Refund: Photo Failed"
+        default:
+            return reason.replacingOccurrences(of: "_", with: " ").capitalized
         }
     }
-
+    
     func ledgerSubtitle(_ item: WalletLedgerItem) -> String {
-        if let feature = item.meta?["feature_key"] as? String {
-            return feature.replacingOccurrences(of: "_", with: " ").capitalized
+        if let meta = item.meta {
+            if let style = meta["style"], style != "None" {
+                return style.replacingOccurrences(of: "_", with: " ").capitalized
+            }
+            if let prompt = meta["prompt"] {
+                return prompt
+            }
         }
-        if let product = item.meta?["product_id"] as? String {
-            return product
+        
+        switch item.reason {
+        case "purchase":
+            return "App Store Purchase"
+        case "subscription_grant":
+            return "Included in your plan"
+        case "refund", "veo_generation_refund":
+            return "Coins returned to balance"
+        default:
+            if item.amount > 0 {
+                return "Added to wallet"
+            } else {
+                return "Digital art creation"
+            }
         }
-        return item.reason.capitalized
     }
 }

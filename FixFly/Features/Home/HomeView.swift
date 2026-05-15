@@ -35,7 +35,6 @@ struct HomeView: View {
     @State private var selectedTabBySection: [String: String] = [:]
     @State private var showPaywall = false
     
-    @State private var selectedFeature: FeatureConfig?
     @State private var selectedGridData: SectionGridData?
     @State private var feedNavData: FeedNavigationData?
 
@@ -45,13 +44,15 @@ struct HomeView: View {
                 Color.black.ignoresSafeArea()
 
                 ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 18) {
-                        HeroHeaderRemote(heroItems: vm.home?.hero.items ?? [])
+                    VStack(spacing: 24) {
+                        HeroHeaderRemote(heroItems: vm.home?.hero.items ?? []) { tappedItem in
+                            handleHeroTap(tappedItem)
+                        }
 
                         ForEach(vm.home?.sections ?? []) { section in
-                            VStack(alignment: .leading, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 14) {
                                 sectionHeader(section)
-                                    .padding(.horizontal, 18)
+                                    .padding(.horizontal, 10)
 
                                 switch section.type {
                                 case .carousel:
@@ -72,23 +73,19 @@ struct HomeView: View {
                                 }
                             }
                         }
-                        Spacer(minLength: 28)
+                        Spacer(minLength: 40)
                     }
                 }
 
-                if vm.isLoading {
-                    loadingOverlay
+                if vm.isLoading && vm.home == nil {
+                    ProgressView().tint(.white)
                 }
             }
+            .ignoresSafeArea()
             .task { await vm.load() }
             .refreshable { await vm.load() }
-            .navigationDestination(item: $selectedFeature) { cfg in
-                FeatureUploadView(config: cfg)
-                    .toolbar(.hidden, for: .tabBar)
-            }
             .navigationDestination(item: $selectedGridData) { data in
                 SectionGridView(sectionId: data.sectionId, title: data.title, items: data.items)
-                    // .toolbar(.hidden, for: .tabBar)
             }
             .navigationDestination(item: $feedNavData) { data in
                 TemplateFeedView(
@@ -98,93 +95,35 @@ struct HomeView: View {
                 )
                 .toolbar(.hidden, for: .tabBar)
             }
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 NavigationBar(showPaywall: $showPaywall)
             }
-            .overlay(alignment: .bottom) {
-                if let err = vm.errorText {
-                    errorToast(err)
+        }
+    }
+
+    private func handleHeroTap(_ item: HeroMediaItemDTO) {
+        guard let targetId = item.action?.targetId else { return }
+        
+        var foundTemplate: RemoteCardItem?
+        var foundSectionId: String?
+        
+        if let sections = vm.home?.sections {
+            for section in sections {
+                let items = (section.items ?? []) + (section.tabs?.flatMap { $0.items } ?? [])
+                if let template = items.first(where: { $0.id == targetId }) {
+                    foundTemplate = template
+                    foundSectionId = section.id
+                    break
                 }
             }
-            .ignoresSafeArea()
         }
-    }
-
-    private var loadingOverlay: some View {
-        VStack(spacing: 12) {
-            ProgressView().tint(.white)
-            Text("Loading...")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.8))
-        }
-        .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.white.opacity(0.10))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(Color.white.opacity(0.10), lineWidth: 1)
-                )
-        )
-    }
-
-    private func errorToast(_ err: String) -> some View {
-        Text(err)
-            .font(.system(size: 12, weight: .medium))
-            .foregroundStyle(.white.opacity(0.9))
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(
-                Capsule()
-                    .fill(Color.red.opacity(0.25))
-                    .overlay(Capsule().stroke(Color.red.opacity(0.35), lineWidth: 1))
+        
+        if let template = foundTemplate, let sectionId = foundSectionId {
+            feedNavData = FeedNavigationData(
+                templates: [template],
+                sectionId: sectionId,
+                currentIndex: 0
             )
-            .padding(.bottom, 14)
-    }
-
-    private struct SectionTitle: View {
-        let icon: String
-        let title: String
-        var onTitleTap: (() -> Void)? = nil
-        var onSeeAllTap: (() -> Void)? = nil
-
-        var body: some View {
-            HStack(spacing: 8) {
-                Button {
-                    onTitleTap?()
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: icon)
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(.white)
-                        Text(title)
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundStyle(.white)
-                            .lineLimit(1)
-                    }
-                }
-                .disabled(onTitleTap == nil)
-                    
-                Spacer()
-                    
-                if let onSeeAllTap = onSeeAllTap {
-                    Button(action: onSeeAllTap) {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(.white)
-                            .frame(width: 32, height: 32)
-                            .background(Color.white.opacity(0.12))
-                            .clipShape(Circle())
-                            .overlay(
-                                Circle()
-                                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -192,45 +131,57 @@ struct HomeView: View {
     private func sectionHeader(_ section: HomeSectionDTO) -> some View {
         let itemsForGrid = section.type == .carouselTabs ? itemsForSelectedTab(sectionId: section.id, tabs: section.tabs ?? []) : (section.items ?? [])
         
-        if let action = section.action, action.type == .navigate {
-            SectionTitle(icon: section.icon, title: section.title, onTitleTap: {
-                let cfg = FeatureConfig(
-                    title: section.title,
-                    endpointPath: endpointPath(for: section.id),
-                    extraFields: [:],
-                    accepts: "image/png",
-                    placeholderText: "Your result will appear here",
-                    processingTitle: "Processing…",
-                    processingSubtitle: "This usually takes a few seconds"
-                )
-                selectedFeature = cfg
-            }, onSeeAllTap: itemsForGrid.isEmpty ? nil : {
-                selectedGridData = SectionGridData(sectionId: section.id, title: section.title, items: itemsForGrid)
-            })
-        } else {
-            SectionTitle(icon: section.icon, title: section.title, onTitleTap: nil, onSeeAllTap: itemsForGrid.isEmpty ? nil : {
-                selectedGridData = SectionGridData(sectionId: section.id, title: section.title, items: itemsForGrid)
-            })
+        HStack(alignment: .top) { 
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Image(systemName: section.icon)
+                        .font(.system(size: 16, weight: .bold))
+                    Text(section.title)
+                        .font(.system(size: 22, weight: .bold))
+                }
+                .foregroundStyle(.white)
+                
+                if let subtitle = section.subtitle, !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+            }
+            
+            Spacer()
+            
+            if !itemsForGrid.isEmpty {
+                Button {
+                    selectedGridData = SectionGridData(sectionId: section.id, title: section.title, items: itemsForGrid)
+                } label: {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 32, height: 32)
+                        .background(Color.white.opacity(0.1))
+                        .clipShape(Circle())
+                }
+            }
         }
     }
 
     private func tabsRow(sectionId: String, tabs: [HomeTabDTO]) -> some View {
-        HStack(spacing: 10) {
-            ForEach(tabs) { tab in
-                PillToggle(
-                    title: tab.title,
-                    isSelected: currentTabId(sectionId: sectionId, tabs: tabs) == tab.id
-                ) {
-                    selectedTabBySection[sectionId] = tab.id
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(tabs) { tab in
+                    PillToggle(
+                        title: tab.title,
+                        isSelected: currentTabId(sectionId: sectionId, tabs: tabs) == tab.id
+                    ) {
+                        selectedTabBySection[sectionId] = tab.id
+                    }
                 }
             }
-            Spacer()
         }
     }
 
     private func currentTabId(sectionId: String, tabs: [HomeTabDTO]) -> String? {
-        if let selected = selectedTabBySection[sectionId] { return selected }
-        return tabs.first?.id
+        selectedTabBySection[sectionId] ?? tabs.first?.id
     }
 
     private func itemsForSelectedTab(sectionId: String, tabs: [HomeTabDTO]) -> [RemoteCardItem] {
@@ -239,29 +190,14 @@ struct HomeView: View {
     }
 
     private func onCardTap(section: HomeSectionDTO, item: RemoteCardItem) {
-        let allItemsInSection: [RemoteCardItem]
-        if section.type == .carouselTabs {
-            allItemsInSection = itemsForSelectedTab(sectionId: section.id, tabs: section.tabs ?? [])
-        } else {
-            allItemsInSection = section.items ?? []
-        }
-        
-        let clickedIndex = allItemsInSection.firstIndex(where: { $0.id == item.id }) ?? 0
+        let allItems = section.type == .carouselTabs ? itemsForSelectedTab(sectionId: section.id, tabs: section.tabs ?? []) : (section.items ?? [])
+        let index = allItems.firstIndex(where: { $0.id == item.id }) ?? 0
         
         feedNavData = FeedNavigationData(
-            templates: allItemsInSection,
+            templates: allItems,
             sectionId: section.id,
-            currentIndex: clickedIndex
+            currentIndex: index
         )
-    }
-
-    private func endpointPath(for sectionId: String) -> String {
-        switch sectionId {
-        case "anime": return "/v1/anime-avatar"
-        case "enhance": return "/v1/enhance-photo"
-        case "restore": return "/v1/restore-old-photo"
-        default: return "/v1/anime-avatar"
-        }
     }
 }
 
@@ -273,38 +209,24 @@ struct SectionGridView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var feedNavData: FeedNavigationData?
 
-    private let columns = [
-        GridItem(.flexible(), spacing: 16),
-        GridItem(.flexible(), spacing: 16)
-    ]
+    private let columns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
 
     var body: some View {
         ZStack {
-            Color.clear.fixFlyBackground()
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
+            Color.black.ignoresSafeArea().fixFlyBackground()
             
             ScrollView(.vertical, showsIndicators: false) {
-                LazyVGrid(columns: columns, spacing: 16) {
+                LazyVGrid(columns: columns, spacing: 14) {
                     ForEach(items) { item in
                         Button {
-                            let clickedIndex = items.firstIndex(where: { $0.id == item.id }) ?? 0
-                            feedNavData = FeedNavigationData(
-                                templates: items,
-                                sectionId: sectionId,
-                                currentIndex: clickedIndex
-                            )
+                            let index = items.firstIndex(where: { $0.id == item.id }) ?? 0
+                            feedNavData = FeedNavigationData(templates: items, sectionId: sectionId, currentIndex: index)
                         } label: {
                             GridRemoteMediaCard(item: item)
-                                .allowsHitTesting(false)
-                                .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
-                .padding(.bottom, 40)
+                .padding(16)
             }
         }
         .navigationTitle(title)
@@ -312,23 +234,14 @@ struct SectionGridView: View {
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 36, height: 36)
+                Button { dismiss() } label: {
+                    Image(systemName: "chevron.left").font(.system(size: 16, weight: .bold)).foregroundStyle(.white)
                 }
             }
         }
         .navigationDestination(item: $feedNavData) { data in
-            TemplateFeedView(
-                templates: data.templates,
-                sectionId: data.sectionId,
-                currentIndex: data.currentIndex
-            )
-            .toolbar(.hidden, for: .tabBar)
+            TemplateFeedView(templates: data.templates, sectionId: data.sectionId, currentIndex: data.currentIndex)
+                .toolbar(.hidden, for: .tabBar)
         }
     }
 }
@@ -341,37 +254,37 @@ struct GridRemoteMediaCard: View {
             Color.white.opacity(0.05)
             
             if let url = URL(string: item.mediaUrl) {
-                if item.mediaType == .video || item.mediaUrl.hasSuffix(".mp4") {
+                if item.mediaType == .video || item.mediaUrl.lowercased().hasSuffix(".mp4") {
                     LoopingCardVideoView(url: url)
+                        .scaledToFill()
+                        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+                        .clipped()
                 } else {
                     AsyncImage(url: url) { phase in
                         if let image = phase.image {
                             image.resizable().scaledToFill()
                         } else {
-                            ProgressView().tint(.white)
+                            Color.white.opacity(0.1)
                         }
                     }
+                    .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+                    .clipped()
                 }
             }
         }
         .aspectRatio(3/4, contentMode: .fill)
-        .frame(minWidth: 0, maxWidth: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.1), lineWidth: 1)
-        )
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Color.white.opacity(0.1), lineWidth: 1))
         .overlay(alignment: .bottomLeading) {
-            if let styleName = item.styleId {
-                Text(styleName)
-                    .font(.system(size: 12, weight: .bold))
+            if let styleName = item.styleId, styleName.lowercased() != "none" {
+                Text(styleName.replacingOccurrences(of: "_", with: " ").capitalized)
+                    .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color.black.opacity(0.5))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.black.opacity(0.6))
                     .clipShape(Capsule())
-                    .padding(10)
+                    .padding(8)
             }
         }
     }

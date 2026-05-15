@@ -71,3 +71,7 @@ enum StringOrIntOrDoubleOrBool: Decodable, CustomStringConvertible, Hashable, Eq
         )
     }
 }
+
+extension Notification.Name {
+    static let generationNeedsRefresh = Notification.Name("generationNeedsRefresh")
+}

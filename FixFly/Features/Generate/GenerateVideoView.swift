@@ -1,13 +1,12 @@
 import SwiftUI
 import PhotosUI
 
-struct GeneratePhotoVideoFormView: View {
-    let initialMediaType: GenerationMediaType
+struct GenerateVideoFormView: View {
     @State private var prompt: String = ""
-    @State private var selectedMediaType: GenerationMediaType
     @State private var selectedStyle: String = "None"
     @State private var selectedAspectRatio: String = "9:16"
     @State private var isGenerating: Bool = false
+    @State private var showCoinsSheet = false
     
     @State private var selectedImages: [UIImage] = []
     @State private var photoPickerItems: [PhotosPickerItem] = []
@@ -18,13 +17,15 @@ struct GeneratePhotoVideoFormView: View {
     
     @Environment(\.dismiss) private var dismiss
     
-    let styles = ["None", "Cinematic", "Anime", "Cyberpunk", "3D Render", "Digital Art"]
-    let aspectRatios = ["1:1", "9:16", "16:9", "3:4", "4:3"]
+    @State private var processingTaskId: String?
+    @State private var finalResultVideoUrl: String?
+    @State private var showResult = false
     
-    init(initialMediaType: GenerationMediaType) {
-        self.initialMediaType = initialMediaType
-        self._selectedMediaType = State(initialValue: initialMediaType)
-    }
+    @State private var showGuidelinesSheet = false
+    @State private var showRealPhotoPicker = false
+    
+    let styles = ["None", "Cinematic", "Anime", "Cyberpunk", "3D Render", "Digital Art"]
+    let aspectRatios = ["9:16", "16:9"]
     
     var body: some View {
         ZStack {
@@ -40,10 +41,6 @@ struct GeneratePhotoVideoFormView: View {
                         aspectRatioSection
                         
                         multiplePhotoSection
-                        
-                        mediaTypeSection
-                            .hidden()
-                            .frame(height: 0)
                         
                         styleSection
                     }
@@ -75,7 +72,7 @@ struct GeneratePhotoVideoFormView: View {
         .onTapGesture {
             isPromptFocused = false
         }
-        .onChange(of: photoPickerItems) { newItems in
+        .onChange(of: photoPickerItems) { oldValue, newItems in
             Task {
                 selectedImages.removeAll()
                 for item in newItems {
@@ -89,23 +86,56 @@ struct GeneratePhotoVideoFormView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Text(initialMediaType == .video ? "Create Video  " : "Create Photo  ")
+                Text("Create Video  ")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(.white)
             }
             
-            ToolbarItem(placement: .navigationBarTrailing) {
-                HStack(spacing: 6) {
-                    Image(systemName: "bitcoinsign.circle.fill")
-                        .font(.system(size: 16))
-                        .foregroundStyle(.yellow)
-
-                    Text("\(WalletManager.shared.coins)")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.white)
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showCoinsSheet = true
+                } label: {
+                    CoinsBadge()
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
+                .buttonStyle(.plain)
+                .sheet(isPresented: $showCoinsSheet) {
+                    CoinsWalletSheetView()
+                        .presentationDetents([.large])
+                        .presentationDragIndicator(.visible)
+                }
+            }
+        }
+        .sheet(item: $processingTaskId) { taskId in
+            PhotoProcessingView(taskId: taskId, onComplete: { outputUrl in
+                self.processingTaskId = nil
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    NotificationCenter.default.post(name: .generationNeedsRefresh, object: nil)
+                    self.finalResultVideoUrl = outputUrl
+                    self.showResult = true
+                }
+            })
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showGuidelinesSheet) {
+            PhotoGuidelinesSheetView {
+                showRealPhotoPicker = true
+            }
+            .presentationBackground(.black)
+            .presentationDetents([.fraction(0.65)])
+            .presentationDragIndicator(.visible)
+        }
+        .photosPicker(
+            isPresented: $showRealPhotoPicker,
+            selection: $photoPickerItems,
+            maxSelectionCount: 3,
+            matching: .images
+        )
+        .navigationDestination(isPresented: $showResult) {
+            if let urlString = finalResultVideoUrl, let videoURL = URL(string: urlString) {
+                VideoResultView(videoURL: videoURL)
+                    .toolbar(.hidden, for: .tabBar)
+            } else {
+                Color.black.ignoresSafeArea()
             }
         }
     }
@@ -183,13 +213,19 @@ struct GeneratePhotoVideoFormView: View {
     private var multiplePhotoSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Reference Photos (Up to 3)")
+                Text("Reference Photos")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.9))
                 Spacer()
                 
                 if !selectedImages.isEmpty {
-                    PhotosPicker(selection: $photoPickerItems, maxSelectionCount: 3, matching: .images) {
+                    Button {
+                        if SessionManager.shared.hasSeenPhotoGuidelinesThisSession {
+                            showRealPhotoPicker = true
+                        } else {
+                            showGuidelinesSheet = true
+                        }
+                    } label: {
                         Text("Edit")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(Color(red: 0.55, green: 0.25, blue: 1.0))
@@ -232,7 +268,13 @@ struct GeneratePhotoVideoFormView: View {
                     .padding(.top, 8)
                 }
             } else {
-                PhotosPicker(selection: $photoPickerItems, maxSelectionCount: 3, matching: .images) {
+                Button {
+                    if SessionManager.shared.hasSeenPhotoGuidelinesThisSession {
+                        showRealPhotoPicker = true
+                    } else {
+                        showGuidelinesSheet = true
+                    }
+                } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "photo.badge.plus")
                             .font(.system(size: 18))
@@ -251,42 +293,6 @@ struct GeneratePhotoVideoFormView: View {
                 }
                 .padding(.horizontal, 16)
             }
-        }
-    }
-    
-    private var mediaTypeSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Format")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.9))
-                .padding(.horizontal, 16)
-            
-            HStack(spacing: 12) {
-                ForEach([GenerationMediaType.image, GenerationMediaType.video], id: \.self) { type in
-                    Button {
-                        selectedMediaType = type
-                    } label: {
-                        HStack {
-                            Image(systemName: type == .video ? "video.fill" : "photo.fill")
-                            Text(type.rawValue)
-                        }
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(selectedMediaType == type ? .white : .white.opacity(0.6))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 48)
-                        .background(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .fill(selectedMediaType == type ? Color.white.opacity(0.15) : Color.white.opacity(0.05))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(selectedMediaType == type ? Color.white.opacity(0.3) : Color.clear, lineWidth: 1)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 16)
         }
     }
     
@@ -326,14 +332,14 @@ struct GeneratePhotoVideoFormView: View {
             startGeneration()
         } label: {
             HStack {
-                Text(initialMediaType == .video ? "Generate Video" : "Generate Image")
+                Text("Generate Video")
                     .font(.system(size: 18, weight: .bold))
                 
                 Spacer()
                 
                 HStack(spacing: 4) {
                     Image(systemName: "bitcoinsign.circle.fill")
-                    Text(initialMediaType == .video ? "600" : "150")
+                    Text("600")
                 }
                 .font(.system(size: 15, weight: .bold))
                 .padding(.horizontal, 10)
@@ -381,15 +387,14 @@ struct GeneratePhotoVideoFormView: View {
         
         let fields = [
             "prompt": prompt,
-            "media_type": selectedMediaType.rawValue,
             "style": selectedStyle,
             "aspect_ratio": selectedAspectRatio
         ]
         
         Task {
             do {
-                _ = try await MultipartAPI.shared.startBackgroundGeneration(
-                    endpointPath: "/v1/generate-nano-banana",
+                let generatedTaskId = try await MultipartAPI.shared.startBackgroundGeneration(
+                    endpointPath: "/v1/generate-veo-video",
                     images: selectedImages,
                     extraFields: fields
                 )
@@ -398,7 +403,7 @@ struct GeneratePhotoVideoFormView: View {
                 
                 await MainActor.run {
                     isGenerating = false
-                    dismiss()
+                    processingTaskId = generatedTaskId
                 }
             } catch {
                 await MainActor.run {

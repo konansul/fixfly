@@ -132,48 +132,46 @@ final class SafePlayerContainerView: UIView {
         }
     }
 
-    // MARK: Setup Player
-
     private func setupPlayer(url: URL) {
+            destroyPlayer()
+            currentURL = url
 
-        destroyPlayer()
+            let asset = AVURLAsset(url: url)
+            let item = AVPlayerItem(asset: asset)
 
-        currentURL = url
+            let player = AVQueuePlayer(playerItem: item)
 
-        let asset = AVURLAsset(url: url)
-        let item = AVPlayerItem(asset: asset)
+            player.isMuted = true
+            player.actionAtItemEnd = .none
+            player.automaticallyWaitsToMinimizeStalling = false
 
-        let player = AVQueuePlayer(playerItem: item)
+            playerLooper = AVPlayerLooper(player: player, templateItem: item)
 
-        player.isMuted = true
-        player.actionAtItemEnd = .none
+            let layer = AVPlayerLayer(player: player)
+            layer.videoGravity = .resizeAspectFill
+            layer.frame = bounds
 
-        // улучшает скролл
-        player.automaticallyWaitsToMinimizeStalling = false
+            self.layer.addSublayer(layer)
 
-        playerLooper = AVPlayerLooper(player: player, templateItem: item)
+            queuePlayer = player
+            playerLayer = layer
 
-        let layer = AVPlayerLayer(player: player)
-        layer.videoGravity = .resizeAspectFill
-        layer.frame = bounds
-
-        self.layer.addSublayer(layer)
-
-        queuePlayer = player
-        playerLayer = layer
-
-        asset.loadValuesAsynchronously(forKeys: ["playable"]) { [weak self] in
-
-            DispatchQueue.main.async {
-
-                guard let self = self else { return }
-
-                if self.queuePlayer?.timeControlStatus != .playing {
-                    self.queuePlayer?.play()
+            Task {
+                do {
+                    let isPlayable = try await asset.load(.isPlayable)
+                    
+                    if isPlayable {
+                        await MainActor.run {
+                            if self.queuePlayer?.timeControlStatus != .playing {
+                                self.queuePlayer?.play()
+                            }
+                        }
+                    }
+                } catch {
+                    print("Failed to load video asset: \(error.localizedDescription)")
                 }
             }
         }
-    }
 
 
     func destroyPlayer() {

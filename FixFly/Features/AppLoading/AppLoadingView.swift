@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct AppLoadingView: View {
-    
     @StateObject private var viewModel = AppLoadingViewModel()
 
     @State private var logoScale: CGFloat = 0.94
@@ -10,6 +9,25 @@ struct AppLoadingView: View {
     @State private var titleOpacity: Double = 0.0
 
     var body: some View {
+        // Проверяем состояние: если готово - показываем главный экран
+        if viewModel.isReady {
+            MainTabView()
+                .preferredColorScheme(.dark)
+                // Опционально: добавляем плавное растворение экрана загрузки
+                // Если хочешь мгновенное переключение без анимации, удали .transition
+                .transition(.opacity)
+        } else {
+            // Иначе показываем экран загрузки
+            loadingScreen
+                .transition(.opacity) // Плавное исчезновение
+                .task {
+                    viewModel.startFakeProgress()
+                    await viewModel.preload()
+                }
+        }
+    }
+    
+    private var loadingScreen: some View {
         ZStack {
             Color.clear.fixFlyBackground()
                 .ignoresSafeArea()
@@ -33,12 +51,6 @@ struct AppLoadingView: View {
                 Spacer()
 
                 VStack(spacing: 14) {
-//                    Text("FixFly")
-//                        .font(.system(size: 28, weight: .semibold))
-//                        .foregroundStyle(Color.white)
-//                        .opacity(titleOpacity)
-//                        .offset(y: titleOffsetY)
-
                     ProgressBar(progress: viewModel.progress)
                         .frame(height: 6)
                         .padding(.horizontal, 80)
@@ -46,26 +58,5 @@ struct AppLoadingView: View {
                 .padding(.bottom, 70)
             }
         }
-        .task {
-           // startAnimations()
-            viewModel.startFakeProgress()
-            await viewModel.preload()
-        }
-        .fullScreenCover(isPresented: $viewModel.isReady) {
-            MainTabView()
-                .preferredColorScheme(.dark)
-        }
     }
-
-//    private func startAnimations() {
-//        withAnimation(.easeOut(duration: 0.7)) {
-//            titleOpacity = 1
-//            titleOffsetY = 0
-//        }
-//
-//        withAnimation(.easeInOut(duration: 1.3).repeatForever(autoreverses: true)) {
-//            logoScale = 1.03
-//            logoOpacity = 1.0
-//        }
-//    }
 }

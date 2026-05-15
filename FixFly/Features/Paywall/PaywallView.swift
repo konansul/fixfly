@@ -1,13 +1,12 @@
-//
-//  PaywallView.swift
-//  FixFly
-//
-
 import SwiftUI
 
 struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var vm = PaywallViewModel()
+
+    private var isCurrentPlanSelected: Bool {
+        vm.activeSubscriptionId != nil && vm.selectedProductId == vm.activeSubscriptionId
+    }
 
     var body: some View {
         ZStack {
@@ -30,7 +29,7 @@ struct PaywallView: View {
             VStack(spacing: 0) {
                 topBar
                     .padding(.horizontal, 18)
-                    .padding(.top, 8)
+                    .padding(.top, 15)
 
                 Spacer()
 
@@ -55,16 +54,6 @@ struct PaywallView: View {
 
     private var topBar: some View {
         HStack {
-            Button { dismiss() } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.92))
-                    .frame(width: 44, height: 44)
-                    .background(Color.white.opacity(0.10))
-                    .clipShape(Circle())
-            }
-            .buttonStyle(.plain)
-
             Spacer()
 
             Button {
@@ -87,13 +76,31 @@ struct PaywallView: View {
                 .font(.system(size: 34, weight: .bold))
                 .foregroundStyle(.white)
 
-            Text("Unlock the full power of FixFly subscriptions or one-time coin packs.")
-                .font(.system(size: 16, weight: .regular))
-                .foregroundStyle(.white.opacity(0.75))
-                .fixedSize(horizontal: false, vertical: true)
+            if let activeId = vm.activeSubscriptionId {
+                let planName = activeId == PaywallItemType.weeklySub.rawValue ? "Weekly" : "Monthly"
+                
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                    Text("Your current plan is \(planName) Subscription")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .background(Color.white.opacity(0.15))
+                .clipShape(Capsule())
+            } else {
+                Text("Unlock the full power of FixFly subscriptions or one-time coin packs.")
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundStyle(.white.opacity(0.75))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             modeSwitcher
                 .padding(.top, 4)
+
+            benefitsSection
 
             ZStack {
                 if vm.selectedProductId.contains("sub") {
@@ -116,55 +123,121 @@ struct PaywallView: View {
                     if vm.isPurchasing {
                         ProgressView().tint(.black)
                     } else {
-                        Text(vm.primaryButtonTitle)
+                        Text(buttonTitle)
                             .font(.system(size: 18, weight: .bold))
                             .foregroundStyle(.black)
                     }
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: 58)
-                .background(Color.white)
-                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .background(isCurrentPlanSelected ? Color.white.opacity(0.5) : Color.white)
+                .clipShape(Capsule())
             }
             .buttonStyle(.plain)
-            .disabled(vm.isPurchasing)
+            .disabled(vm.isPurchasing || isCurrentPlanSelected)
             .padding(.top, 8)
 
             Text("Payment will be charged to your Apple ID account. Subscriptions automatically renew unless canceled at least 24 hours before the end of the current period.")
                 .font(.system(size: 11, weight: .regular))
                 .foregroundStyle(.white.opacity(0.45))
-                .padding(.top, 6)
                 .padding(.bottom, 20)
+        }
+    }
+    
+    private var buttonTitle: String {
+        if isCurrentPlanSelected {
+            return "Current Plan"
+        } else if vm.activeSubscriptionId != nil && vm.selectedProductId.contains("sub") {
+            return "Switch Plan"
+        } else {
+            return vm.primaryButtonTitle
         }
     }
 
     private var modeSwitcher: some View {
         let isSub = vm.selectedProductId.contains("sub")
-        return ZStack(alignment: isSub ? .leading : .trailing) {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+        return ZStack {
+            Capsule()
                 .fill(Color.white.opacity(0.08))
 
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.white.opacity(0.16))
-                .frame(width: 160)
-                .padding(4)
-                .animation(.spring(response: 0.32, dampingFraction: 0.85), value: isSub)
+            GeometryReader { geo in
+                let halfWidth = geo.size.width / 2
+                Capsule()
+                    .fill(Color.white.opacity(0.16))
+                    .frame(width: halfWidth - 4)
+                    .offset(x: isSub ? 4 : halfWidth)
+                    .animation(.easeInOut(duration: 0.35), value: isSub)
+            }
+            .padding(.vertical, 4)
 
             HStack(spacing: 0) {
                 Button {
-                    vm.selectedProductId = PaywallItemType.weeklySub.rawValue
+                    if !isSub {
+                        triggerHaptic()
+                        vm.selectedProductId = vm.activeSubscriptionId ?? PaywallItemType.weeklySub.rawValue
+                    }
                 } label: {
-                    Text("Subscription").font(.system(size: 15, weight: .semibold)).foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 52)
-                }.buttonStyle(.plain)
+                    Text("Subscription")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                }
+                .buttonStyle(.plain)
                 
                 Button {
-                    vm.selectedProductId = PaywallItemType.coins1200.rawValue
+                    if isSub {
+                        triggerHaptic()
+                        vm.selectedProductId = PaywallItemType.coins1200.rawValue
+                    }
                 } label: {
-                    Text("Coins").font(.system(size: 15, weight: .semibold)).foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 52)
-                }.buttonStyle(.plain)
+                    Text("Coins")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                }
+                .buttonStyle(.plain)
             }
         }
         .frame(height: 52)
+        .clipShape(Capsule())
+    }
+
+    private func triggerHaptic() {
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+    }
+
+    private var benefitsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if vm.selectedProductId.contains("sub") {
+                benefitRow(icon: "✨", text: "Priority generation speed")
+                benefitRow(icon: "💧", text: "No watermarks")
+                benefitRow(icon: "💎", text: "Unlock all Premium templates")
+                
+                if vm.selectedProductId == PaywallItemType.weeklySub.rawValue {
+                    benefitRow(icon: "🎁", text: "2,400 Coins included every week")
+                } else {
+                    benefitRow(icon: "🎁", text: "7,200 Coins included every month")
+                }
+            } else {
+                benefitRow(icon: "🪙", text: "One-time coin pack. Premium features not included.")
+            }
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 4)
+        .animation(.easeInOut(duration: 0.2), value: vm.selectedProductId)
+    }
+
+    private func benefitRow(icon: String, text: String) -> some View {
+        HStack(spacing: 12) {
+            Text(icon)
+                .font(.system(size: 16))
+            Text(text)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.white.opacity(0.9))
+        }
     }
 
     private var subscriptionSection: some View {
@@ -172,7 +245,7 @@ struct PaywallView: View {
             PlanRow(
                 title: "Weekly",
                 subtitle: "2,400 Coins",
-                badge: "Popular",
+                badge: vm.activeSubscriptionId == PaywallItemType.weeklySub.rawValue ? "Current Plan" : "Popular",
                 rightTop: "per week",
                 rightBottom: "$6.99",
                 isSelected: vm.selectedProductId == PaywallItemType.weeklySub.rawValue
@@ -183,7 +256,7 @@ struct PaywallView: View {
             PlanRow(
                 title: "Monthly",
                 subtitle: "7,200 Coins",
-                badge: "Best Value",
+                badge: vm.activeSubscriptionId == PaywallItemType.monthlySub.rawValue ? "Current Plan" : "Best Value",
                 rightTop: "per month",
                 rightBottom: "$16.99",
                 isSelected: vm.selectedProductId == PaywallItemType.monthlySub.rawValue

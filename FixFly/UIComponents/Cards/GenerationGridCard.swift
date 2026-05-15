@@ -1,10 +1,3 @@
-//
-//  GenerationGridCard.swift
-//  FixFly
-//
-//  Created by Kanan Sultanov on 14.03.26.
-//
-
 import SwiftUI
 
 struct GenerationGridCard: View {
@@ -14,7 +7,6 @@ struct GenerationGridCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-
             GenerationThumbnailView(item: item)
 
             VStack(alignment: .leading, spacing: 6) {
@@ -23,10 +15,6 @@ struct GenerationGridCard: View {
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
-
-                    // Spacer()
-
-                    // statusChip(item.status)
                 }
 
                 Text(formattedDate)
@@ -52,34 +40,14 @@ struct GenerationGridCard: View {
                 )
         )
     }
-
-    private func statusChip(_ status: String) -> some View {
-        Text(status.capitalized)
-            .font(.system(size: 10, weight: .bold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(
-                Capsule().fill(Color.white.opacity(0.12))
-            )
-    }
 }
 
 struct GenerationThumbnailView: View {
     let item: GenerationItemDTO
 
-    // Проверяем, является ли результат видео
     private var isVideo: Bool {
         let outStr = item.outputUrl?.lowercased() ?? ""
         return outStr.hasSuffix(".mp4") || outStr.hasSuffix(".mov")
-    }
-
-    // 🔥 Если это видео, берем входную фотку. Если фото - берем готовый результат.
-    private var imageURLToLoad: String? {
-        if isVideo {
-            return item.inputUrl
-        }
-        return item.outputUrl
     }
 
     var body: some View {
@@ -87,38 +55,39 @@ struct GenerationThumbnailView: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color.white.opacity(0.05))
 
-            if let urlString = imageURLToLoad, let url = URL(string: urlString) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .empty:
-                        ProgressView().tint(.white)
-
-                    case .success(let image):
-                        ZStack {
+            if let urlString = item.outputUrl, let url = URL(string: urlString) {
+                if isVideo {
+                    LoopingCardVideoView(url: url)
+                        .scaledToFill()
+                        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+                        .clipped()
+                        .overlay(alignment: .topLeading) {
+                            Image(systemName: "video.fill")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(6)
+                                .background(Color.black.opacity(0.5))
+                                .clipShape(Circle())
+                                .padding(8)
+                        }
+                } else {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .empty:
+                            ProgressView().tint(.white)
+                        case .success(let image):
                             image
                                 .resizable()
-                                .scaledToFit() // Измени на .scaledToFill() если хочешь, чтобы фотка заполняла всю карточку
-                                .frame(maxWidth: .infinity, maxHeight: 210)
-                                .padding(isVideo ? 0 : 8) // Убираем паддинг для видео-превью, чтобы было сочнее
+                                .scaledToFill()
+                                .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
                                 .clipped()
-
-                            // 🔥 Добавляем иконку "Play", чтобы было понятно, что это видео
-                            if isVideo {
-                                Color.black.opacity(0.2) // Легкое затемнение
-                                Image(systemName: "play.circle.fill")
-                                    .font(.system(size: 40))
-                                    .foregroundStyle(.white.opacity(0.9))
-                                    .shadow(radius: 4)
-                            }
+                        case .failure:
+                            Image(systemName: "photo")
+                                .font(.system(size: 26))
+                                .foregroundStyle(.white.opacity(0.45))
+                        @unknown default:
+                            EmptyView()
                         }
-
-                    case .failure:
-                        Image(systemName: "photo")
-                            .font(.system(size: 26))
-                            .foregroundStyle(.white.opacity(0.45))
-
-                    @unknown default:
-                        EmptyView()
                     }
                 }
             } else {
@@ -127,7 +96,7 @@ struct GenerationThumbnailView: View {
                     .foregroundStyle(.white.opacity(0.45))
             }
         }
-        .frame(height: 210)
+        .aspectRatio(0.75, contentMode: .fill)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)

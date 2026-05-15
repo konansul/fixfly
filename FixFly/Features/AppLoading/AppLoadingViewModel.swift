@@ -25,7 +25,7 @@ final class AppLoadingViewModel: ObservableObject {
     
     func preload() async {
         async let bootstrapTask: Void = {
-            try? await AuthStore.shared.bootstrap()
+            await AuthStore.shared.bootstrap()
         }()
 
         async let homePreloadTask: Void = {
@@ -40,6 +40,8 @@ final class AppLoadingViewModel: ObservableObject {
 
         try? await Task.sleep(nanoseconds: 200_000_000)
 
-        isReady = true
+        withAnimation(.easeInOut(duration: 0.5)) {
+            isReady = true
+        }
     }
 }

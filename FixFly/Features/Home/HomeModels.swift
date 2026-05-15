@@ -1,10 +1,3 @@
-//
-//  HomeModels.swift
-//  FixFly
-//
-//  Created by Kanan Sultanov on 28.02.26.
-//
-
 import Foundation
 
 struct HomeResponse: Decodable {
@@ -13,23 +6,23 @@ struct HomeResponse: Decodable {
     let sections: [HomeSectionDTO]
 }
 
-
 struct HeroDTO: Decodable {
     let items: [HeroMediaItemDTO]
 }
 
-struct HeroMediaItemDTO: Decodable, Identifiable, Hashable {
-    enum MediaType: String, Decodable {
-        case image
-        case video
-    }
-
+struct HeroMediaItemDTO: Codable, Identifiable, Hashable {
     let id: String
-    let mediaType: MediaType
+    let mediaType: String
     let mediaUrl: String
     let posterUrl: String?
+    let action: HeroActionDTO?
+    let resultType: String?
 }
 
+struct HeroActionDTO: Codable, Hashable {
+    let type: String
+    let targetId: String
+}
 
 struct HomeSectionDTO: Decodable, Identifiable {
     enum SectionType: String, Decodable {
@@ -39,12 +32,11 @@ struct HomeSectionDTO: Decodable, Identifiable {
 
     let id: String
     let title: String
+    let subtitle: String?
     let icon: String
     let type: SectionType
-
     let items: [RemoteCardItem]?
     let tabs: [HomeTabDTO]?
-
     let action: HomeActionDTO?
 }
 
@@ -53,7 +45,6 @@ struct HomeTabDTO: Decodable, Identifiable {
     let title: String
     let items: [RemoteCardItem]
 }
-
 
 struct RemoteCardItem: Decodable, Identifiable, Hashable {
     enum MediaType: String, Decodable {
@@ -66,8 +57,13 @@ struct RemoteCardItem: Decodable, Identifiable, Hashable {
     let mediaUrl: String
     let posterUrl: String?
     let styleId: String?
-}
+    let prompt: String?
+    let resultType: MediaType?
 
+    var actualResultType: MediaType {
+        return resultType ?? mediaType
+    }
+}
 
 struct HomeActionDTO: Decodable {
     enum ActionType: String, Decodable {
@@ -84,7 +80,6 @@ struct HomeActionPayloadDTO: Decodable {
     let endpoint: String
     let extra: [String: String]?
 }
-
 
 struct FeatureConfig: Identifiable, Hashable {
     let id = UUID()

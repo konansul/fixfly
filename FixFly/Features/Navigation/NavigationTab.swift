@@ -25,11 +25,9 @@ struct NavigationBar: ToolbarContent {
                 showPaywall = true
             } label: {
                 ProButton()
-                    // Фиксируем размер контента внутри кнопки
                     .fixedSize(horizontal: true, vertical: false)
             }
             .buttonStyle(.plain)
-            // Фиксируем саму кнопку в тулбаре
             .fixedSize(horizontal: true, vertical: false)
             .sheet(isPresented: $showPaywall) {
                 PaywallView()

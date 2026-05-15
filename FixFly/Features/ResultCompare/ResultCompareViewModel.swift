@@ -1,8 +1,3 @@
-//
-//  ResultCompareViewModel.swift
-//  FixFly
-//
-
 import SwiftUI
 import Photos
 import Combine
@@ -31,7 +26,7 @@ final class ResultCompareViewModel: ObservableObject {
 
         case .remote(let raw):
             guard let url = absoluteURL(from: raw) else {
-                showToast("Bad URL")
+                showToast("Invalid link")
                 return
             }
 
@@ -45,46 +40,38 @@ final class ResultCompareViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Сохранение Картинки
     private func handleImageSave(from url: URL) async {
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             guard let image = UIImage(data: data) else {
-                showToast("Bad image data")
+                showToast("Error processing image")
                 return
             }
             await saveToPhotos(image)
         } catch {
-            showToast("Download failed")
+            showToast("Failed to download")
         }
     }
 
-    // MARK: - Сохранение Видео
     private func handleVideoSave(from url: URL) async {
-        // Если это уже локальный файл (например, сразу после генерации)
         if url.isFileURL {
             await saveVideoToPhotos(url)
             return
         }
 
-        // Если это ссылка из интернета (например, из истории генераций)
         do {
             showToast("Downloading...")
-            // Скачиваем во временный файл
             let (tempURL, _) = try await URLSession.shared.download(from: url)
             
-            // Галерея iOS требует, чтобы файл имел правильное расширение (.mp4),
-            // поэтому переименовываем скачанный temp-файл.
             let fileManager = FileManager.default
             let newURL = tempURL.deletingPathExtension().appendingPathExtension("mp4")
             
-            try? fileManager.removeItem(at: newURL) // Удаляем старый, если был
+            try? fileManager.removeItem(at: newURL)
             try fileManager.moveItem(at: tempURL, to: newURL)
             
             await saveVideoToPhotos(newURL)
-            
         } catch {
-            showToast("Download failed")
+            showToast("Failed to download video")
         }
     }
 
@@ -93,7 +80,7 @@ final class ResultCompareViewModel: ObservableObject {
 
         if status == .authorized || status == .limited {
             UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
-            showToast("Saved ✅")
+            successFeedback()
             return
         }
 
@@ -101,9 +88,9 @@ final class ResultCompareViewModel: ObservableObject {
 
         if newStatus == .authorized || newStatus == .limited {
             UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
-            showToast("Saved ✅")
+            successFeedback()
         } else {
-            showToast("No Photos permission")
+            showToast("Photos access denied")
         }
     }
 
@@ -120,7 +107,7 @@ final class ResultCompareViewModel: ObservableObject {
         if newStatus == .authorized || newStatus == .limited {
             await performVideoSave(fileURL: fileURL)
         } else {
-            showToast("No Photos permission")
+            showToast("Photos access denied")
         }
     }
 
@@ -129,19 +116,25 @@ final class ResultCompareViewModel: ObservableObject {
             try await PHPhotoLibrary.shared().performChanges {
                 PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
             }
-            showToast("Saved ✅")
+            successFeedback()
         } catch {
-            showToast("Failed to save video")
+            showToast("Failed to save")
         }
     }
 
+    private func successFeedback() {
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+        
+        toast = "SUCCESS_ACTION"
+    }
 
     private func showToast(_ text: String) {
-        withAnimation(.easeInOut(duration: 0.2)) {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
             toast = text
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
             withAnimation(.easeInOut(duration: 0.2)) {
                 self.toast = nil
             }

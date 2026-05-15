@@ -1,5 +1,4 @@
 import SwiftUI
-import Kingfisher
 
 enum LibraryMediaType: String, CaseIterable {
     case photo = "Photo"
@@ -22,11 +21,6 @@ struct LibraryView: View {
     @State private var photoItems: [RemoteCardItem] = []
     @State private var isLoading: Bool = true
     @State private var showPaywall: Bool = false
-
-    private let columns = [
-        GridItem(.flexible(), spacing: 16),
-        GridItem(.flexible(), spacing: 16)
-    ]
 
     var body: some View {
         NavigationStack {
@@ -128,30 +122,17 @@ struct LibraryView: View {
     }
 
     private var mediaTypeToggle: some View {
-        HStack(spacing: 0) {
+        Picker("Media Type", selection: $selectedMediaType) {
             ForEach(LibraryMediaType.allCases, id: \.self) { type in
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        selectedMediaType = type
-                        isSearchFocused = false
-                    }
-                } label: {
-                    Text(type.rawValue)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(selectedMediaType == type ? .white : .white.opacity(0.6))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                        .background(
-                            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                .fill(selectedMediaType == type ? Color.white.opacity(0.15) : Color.clear)
-                        )
-                }
-                .buttonStyle(.plain)
+                Text(type.rawValue).tag(type)
             }
         }
-        .padding(4)
-        .background(Color.white.opacity(0.05))
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .pickerStyle(.segmented)
+        .clipped()
+        .contentShape(Rectangle())
+        .onChange(of: selectedMediaType) { _ in
+            isSearchFocused = false
+        }
     }
 
     private var filteredItems: [RemoteCardItem] {
@@ -217,11 +198,9 @@ struct LibraryView: View {
     private func loadLibraryData() async {
         guard let url = URL(string: ConfigAPI.baseURL + "/v1/library") else { return }
         var request = URLRequest(url: url)
-        
         if let token = TokenStore.shared.accessToken {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
-        
         do {
             let (data, _) = try await URLSession.shared.data(for: request)
             let response = try JSONDecoder().decode(LibraryResponse.self, from: data)
@@ -231,40 +210,35 @@ struct LibraryView: View {
                 self.isLoading = false
             }
         } catch {
-            await MainActor.run {
-                self.isLoading = false
-            }
+            await MainActor.run { self.isLoading = false }
         }
     }
 }
 
 struct LibraryGridRemoteMediaCard: View {
     let item: RemoteCardItem
-    
     var body: some View {
         ZStack {
             Color.white.opacity(0.05)
-            
             if let url = URL(string: item.mediaUrl) {
                 if item.mediaType == .video || item.mediaUrl.hasSuffix(".mp4") {
-                    CachedVideoView(remoteURL: url)
+                    LoopingCardVideoView(url: url)
                 } else {
-                    KFImage(url)
-                        .placeholder {
+                    AsyncImage(url: url) { phase in
+                        if let image = phase.image {
+                            image.resizable().scaledToFill()
+                        } else {
                             ProgressView().tint(.white)
                         }
-                        .fade(duration: 0.25)
-                        .cacheOriginalImage()
-                        .resizable()
-                        .scaledToFill()
+                    }
                 }
             }
         }
         .aspectRatio(3/4, contentMode: .fill)
         .frame(minWidth: 0, maxWidth: .infinity)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(Color.white.opacity(0.1), lineWidth: 1)
         )
     }
