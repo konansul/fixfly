@@ -63,6 +63,16 @@
             ReferencedContainer = "container:FixFly.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <CommandLineArguments>
+         <CommandLineArgument
+            argument = "-SKSimulatedTransactionIDMode random"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-SwiftUI_ColorIntermediateUpdates 1"
+            isEnabled = "YES">
+         </CommandLineArgument>
+      </CommandLineArguments>
       <StoreKitConfigurationFileReference
          identifier = "../../FixFly/App/FixFly.storekit">
       </StoreKitConfigurationFileReference>

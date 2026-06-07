@@ -33,8 +33,8 @@ struct AppLoadingView: View {
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
 
-            Color.black.opacity(0.18)
-                .ignoresSafeArea()
+//            Color.black.opacity(0.18)
+//                .ignoresSafeArea()
 
             VStack {
                 Spacer()

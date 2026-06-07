@@ -43,6 +43,8 @@ struct ApplyPurchaseRequest: Encodable {
     let amountCents: Int?
     let currency: String?
     let raw: [String: String]
+    // StoreKit 2 signed transaction (JWS) — the backend verifies this.
+    let signedTransaction: String
 
     enum CodingKeys: String, CodingKey {
         case provider
@@ -52,6 +54,7 @@ struct ApplyPurchaseRequest: Encodable {
         case amountCents = "amount_cents"
         case currency
         case raw
+        case signedTransaction = "signed_transaction"
     }
 }
 

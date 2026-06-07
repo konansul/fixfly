@@ -3,6 +3,8 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showCopiedToast = false
+    @State private var isRestoring = false
+    @State private var restoreMessage: String?
     
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -92,9 +94,32 @@ struct SettingsView: View {
                 .transition(.opacity.combined(with: .move(edge: .bottom)))
                 .zIndex(1)
             }
+
+            if isRestoring {
+                ZStack {
+                    Color.black.opacity(0.4).ignoresSafeArea()
+                    VStack(spacing: 12) {
+                        ProgressView().tint(.white).scaleEffect(1.2)
+                        Text("Restoring...")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.85))
+                    }
+                    .padding(24)
+                    .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.white.opacity(0.12)))
+                }
+                .zIndex(2)
+            }
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Restore Purchases", isPresented: Binding(
+            get: { restoreMessage != nil },
+            set: { if !$0 { restoreMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(restoreMessage ?? "")
+        }
     }
     
     private func settingsSection<Content: View>(@ViewBuilder content: () -> Content) -> some View {
@@ -186,10 +211,20 @@ struct SettingsView: View {
     }
 
     private func restorePurchases() {
-        // Здесь будет вызов логики из твоего StoreManager, например:
-        // Task {
-        //     await StoreManager.shared.restorePurchases()
-        // }
-        print("Restore Purchases Tapped")
+        guard !isRestoring else { return }
+        isRestoring = true
+
+        Task {
+            do {
+                let count = try await StoreManager.shared.restore()
+                await WalletManager.shared.refreshBalance()
+                restoreMessage = count > 0
+                    ? "Your purchases have been restored."
+                    : "No active subscriptions found to restore."
+            } catch {
+                restoreMessage = "Couldn't restore purchases. Please try again."
+            }
+            isRestoring = false
+        }
     }
 }

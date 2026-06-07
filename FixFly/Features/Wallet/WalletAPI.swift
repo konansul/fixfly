@@ -84,7 +84,8 @@ final class WalletAPI {
             "original_transaction_id": payload.originalTransactionId as Any,
             "amount_cents": payload.amountCents as Any,
             "currency": payload.currency as Any,
-            "raw": payload.raw
+            "raw": payload.raw,
+            "signed_transaction": payload.signedTransaction
         ]
 
         let response: ApplyPurchaseResponse = try await ClientAPI.shared.post(

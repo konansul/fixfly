@@ -11,7 +11,6 @@ struct GeneratePhotoFormView: View {
     @State private var selectedImages: [UIImage] = []
     @State private var photoPickerItems: [PhotosPickerItem] = []
     
-    @State private var showGuidelinesSheet = false
     @State private var showRealPhotoPicker = false
     
     @State private var toastMessage: String?
@@ -113,13 +112,7 @@ struct GeneratePhotoFormView: View {
             })
             .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showGuidelinesSheet) {
-            PhotoGuidelinesSheetView {
-                showRealPhotoPicker = true
-            }
-            .presentationDetents([.fraction(0.65)])
-            .presentationDragIndicator(.visible)
-        }
+        // Удалили блок .sheet(isPresented: $showGuidelinesSheet)
         .photosPicker(
             isPresented: $showRealPhotoPicker,
             selection: $photoPickerItems,
@@ -229,11 +222,8 @@ struct GeneratePhotoFormView: View {
                 
                 if !selectedImages.isEmpty {
                     Button {
-                        if SessionManager.shared.hasSeenPhotoGuidelinesThisSession {
-                            showRealPhotoPicker = true
-                        } else {
-                            showGuidelinesSheet = true
-                        }
+                        // Сразу открываем галерею
+                        showRealPhotoPicker = true
                     } label: {
                         Text("Edit")
                             .font(.system(size: 14, weight: .medium))
@@ -278,11 +268,8 @@ struct GeneratePhotoFormView: View {
                 }
             } else {
                 Button {
-                    if SessionManager.shared.hasSeenPhotoGuidelinesThisSession {
-                        showRealPhotoPicker = true
-                    } else {
-                        showGuidelinesSheet = true
-                    }
+                    // Сразу открываем галерею
+                    showRealPhotoPicker = true
                 } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "photo.badge.plus")
