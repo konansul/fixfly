@@ -56,6 +56,9 @@ struct RemoteCardItem: Decodable, Identifiable, Hashable {
     let mediaType: MediaType
     let mediaUrl: String
     let posterUrl: String?
+    /// Example input face shown as "your face → result" in the template detail.
+    /// Present for both photos and videos (posterUrl stays the feed thumbnail).
+    let modelUrl: String?
     let styleId: String?
     let prompt: String?
     let resultType: MediaType?

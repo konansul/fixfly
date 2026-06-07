@@ -8,7 +8,6 @@ struct TemplateFeedView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var showPhotoPicker = false
-    @State private var showGuidelinesSheet = false
 
     @State private var selectedImage: UIImage?
     @State private var finalResultImageUrl: String?
@@ -25,6 +24,8 @@ struct TemplateFeedView: View {
     @State private var showCoinsSheet = false
     
     @State private var showPaywall = false
+    
+    @State private var isMuted = false
 
     init(templates: [RemoteCardItem], sectionId: String, currentIndex: Int) {
         self.templates = templates
@@ -43,12 +44,14 @@ struct TemplateFeedView: View {
         ZStack {
             Color.black.ignoresSafeArea()
 
+            // TikTok-подобный вертикальный скролл
             ScrollView(.vertical, showsIndicators: false) {
                 LazyVStack(spacing: 0) {
                     ForEach(templates) { template in
                         TemplateFullScreenPage(
                             template: template,
-                            isActive: template.id == scrollPosition
+                            isActive: template.id == scrollPosition,
+                            isMuted: isMuted // Передаем состояние звука во вью
                         )
                         .containerRelativeFrame([.horizontal, .vertical])
                         .id(template.id)
@@ -67,12 +70,36 @@ struct TemplateFeedView: View {
             }
             .ignoresSafeArea()
 
+            // Усиленное затемнение
             gradientOverlay
 
-            VStack {
+            // Поверх контента выводим интерфейс управления
+            VStack(spacing: 0) {
                 Spacer()
-                if activeTemplate != nil {
-                    bottomSection
+                
+                // --- Кнопка управления звуком (только для видео) ---
+                HStack {
+                    Spacer()
+                    if activeTemplate?.actualResultType == .video {
+                        Button {
+                            withAnimation { isMuted.toggle() }
+                        } label: {
+                            Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(.white)
+                                .frame(width: 44, height: 44)
+                                .background(Color.black.opacity(0.4))
+                                .clipShape(Circle())
+                                .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
+                        }
+                        .padding(.trailing, 20)
+                        .padding(.bottom, 10) // Отступ над нижней панелью
+                    }
+                }
+                
+                // Нижняя панель
+                if let active = activeTemplate {
+                    bottomSection(for: active)
                 }
             }
 
@@ -88,14 +115,6 @@ struct TemplateFeedView: View {
                     }
                 }
             }
-        }
-        .sheet(isPresented: $showGuidelinesSheet) {
-            PhotoGuidelinesSheetView {
-                showPhotoPicker = true
-            }
-            .presentationDetents([.fraction(0.65)])
-            .presentationDragIndicator(.visible)
-            .ignoresSafeArea(.all)
         }
         .sheet(isPresented: $showPhotoPicker) {
             ImagePicker(sourceType: .photoLibrary) { image in
@@ -165,6 +184,11 @@ struct TemplateFeedView: View {
                 .buttonStyle(.plain)
             }
         }
+        .onAppear {
+            // ВАЖНО: Разрешаем звуку играть, даже если айфон в беззвучном режиме
+            try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            try? AVAudioSession.sharedInstance().setActive(true)
+        }
     }
 
     private var gradientOverlay: some View {
@@ -179,48 +203,78 @@ struct TemplateFeedView: View {
             Spacer()
             
             LinearGradient(
-                colors: [Color.clear, Color.black.opacity(0.6), Color.black.opacity(0.9)],
+                colors: [
+                    Color.clear,
+                    Color.black.opacity(0.6),
+                    Color.black.opacity(0.9),
+                    Color.black
+                ],
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .frame(height: 280)
+            .frame(height: 450)
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
     }
 
-    private var bottomSection: some View {
-        VStack(alignment: .center, spacing: 16) {
-            Text(activeTemplate?.styleId?.replacingOccurrences(of: "_", with: " ").capitalized ?? "Awesome Effect")
+    private func bottomSection(for template: RemoteCardItem) -> some View {
+        VStack(alignment: .center, spacing: 14) {
+            
+            if let modelFaceUrl = template.modelUrl {
+                HStack(alignment: .bottom, spacing: 8) {
+                    AsyncImage(url: URL(string: modelFaceUrl)) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().aspectRatio(contentMode: .fill)
+                        default:
+                            Color.gray.opacity(0.3)
+                        }
+                    }
+                    .frame(width: 90, height: 120)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.white.opacity(0.9), lineWidth: 2)
+                    )
+                    .shadow(color: .black.opacity(0.5), radius: 8, x: 0, y: 4)
+                    
+                    HandDrawnArrow()
+                        .offset(y: -30)
+                    
+                    Spacer()
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 8)
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+
+            Text(template.styleId?.replacingOccurrences(of: "_", with: " ").capitalized ?? "Awesome Effect")
                 .font(.system(size: 26, weight: .bold))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
-                .shadow(radius: 2)
-                .id(activeTemplate?.id)
+                .id(template.id)
 
-            HStack(spacing: 12) {
-                badge(icon: activeTemplate?.actualResultType == .video ? "video" : "photo",
-                      text: activeTemplate?.actualResultType == .video ? "1 video" : "1 photo")
+            HStack(spacing: 10) {
+                badge(icon: template.actualResultType == .video ? "video" : "photo",
+                      text: template.actualResultType == .video ? "1 video" : "1 photo")
                 
-                if activeTemplate?.actualResultType == .video {
-                    badge(icon: "speaker.wave.2", text: "With sound")
+                if template.actualResultType == .video {
+                    badge(icon: isMuted ? "speaker.slash.fill" : "speaker.wave.2",
+                          text: isMuted ? "Muted" : "With sound")
                 }
                 
                 badge(icon: "bitcoinsign.circle.fill",
-                      text: activeTemplate?.actualResultType == .video ? "600 coins" : "150 coins",
+                      text: template.actualResultType == .video ? "600 coins" : "150 coins",
                       iconColor: .yellow)
             }
-            .padding(.bottom, 10)
-            .id(activeTemplate?.id.appending("_badges"))
+            .id(template.id.appending("_badges"))
 
             Button {
-                if SessionManager.shared.hasSeenPhotoGuidelinesThisSession {
-                    showPhotoPicker = true
-                } else {
-                    showGuidelinesSheet = true
-                }
+                // Сразу открываем пикер, без промежуточного окна
+                showPhotoPicker = true
             } label: {
-                Text(activeTemplate?.actualResultType == .video ? "Create Video" : "Create Photo")
+                Text(template.actualResultType == .video ? "Create Video" : "Create Photo")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -239,9 +293,9 @@ struct TemplateFeedView: View {
             }
             .padding(.horizontal, 20)
             .disabled(isUploading)
-            .id(activeTemplate?.id.appending("_btn"))
+            .id(template.id.appending("_btn"))
         }
-        .padding(.bottom, 40)
+        .padding(.bottom, 30)
     }
 
     private func badge(icon: String, text: String, iconColor: Color = .white) -> some View {
@@ -249,11 +303,11 @@ struct TemplateFeedView: View {
             Image(systemName: icon).foregroundStyle(iconColor)
             Text(text)
         }
-        .font(.system(size: 13, weight: .semibold))
+        .font(.system(size: 12, weight: .semibold))
         .foregroundStyle(.white)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color.white.opacity(0.15))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.white.opacity(0.12))
         .clipShape(Capsule())
     }
 
@@ -276,19 +330,12 @@ struct TemplateFeedView: View {
         
         if isVideo {
             extra["aspect_ratio"] = ratio > 1.0 ? "16:9" : "9:16"
-            
         } else {
-            if ratio >= 1.5 {
-                extra["aspect_ratio"] = "16:9"
-            } else if ratio >= 1.15 {
-                extra["aspect_ratio"] = "4:3"
-            } else if ratio >= 0.85 {
-                extra["aspect_ratio"] = "1:1"
-            } else if ratio >= 0.65 {
-                extra["aspect_ratio"] = "3:4"
-            } else {
-                extra["aspect_ratio"] = "9:16"
-            }
+            if ratio >= 1.5 { extra["aspect_ratio"] = "16:9" }
+            else if ratio >= 1.15 { extra["aspect_ratio"] = "4:3" }
+            else if ratio >= 0.85 { extra["aspect_ratio"] = "1:1" }
+            else if ratio >= 0.65 { extra["aspect_ratio"] = "3:4" }
+            else { extra["aspect_ratio"] = "9:16" }
         }
 
         do {
@@ -305,52 +352,79 @@ struct TemplateFeedView: View {
                 self.processingTaskId = taskId
             }
         } catch {
-                await MainActor.run {
-                    isUploading = false
-                    
-                    let errorString = error.localizedDescription
-                    
-                    if errorString.contains("402") || errorString.lowercased().contains("not enough coins") {
-                        showPaywall = true
-                    } else {
-                        errorMessage = "Oops! Something went wrong. Please try again."
-                    }
+            await MainActor.run {
+                isUploading = false
+                let errorString = error.localizedDescription
+                if errorString.contains("402") || errorString.lowercased().contains("not enough coins") {
+                    showPaywall = true
+                } else {
+                    errorMessage = "Oops! Something went wrong. Please try again."
                 }
             }
+        }
     }
 }
 
 private struct TemplateFullScreenPage: View {
     let template: RemoteCardItem
     let isActive: Bool
+    let isMuted: Bool // Принимаем параметр звука
 
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            if let posterUrlString = template.posterUrl, let posterUrl = URL(string: posterUrlString) {
-                AsyncImage(url: posterUrl) { phase in
-                    if let image = phase.image {
-                        image.resizable().scaledToFill().ignoresSafeArea()
-                    }
-                }
-            }
-
             if let url = URL(string: template.mediaUrl) {
                 if template.mediaType == .video || template.mediaUrl.hasSuffix(".mp4") || template.mediaUrl.hasSuffix(".mov") {
-                    LoopingVideoView(url: url, isActive: isActive)
+                    
+                    // Передаем isMuted в плеер
+                    LoopingVideoView(url: url, isActive: isActive, isMuted: isMuted)
                         .ignoresSafeArea()
+                        
                 } else {
                     AsyncImage(url: url) { phase in
-                        if let image = phase.image {
-                            image.resizable().scaledToFill().ignoresSafeArea()
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                                .ignoresSafeArea()
+                        case .failure:
+                            VStack {
+                                Image(systemName: "photo")
+                                    .font(.largeTitle)
+                                    .foregroundColor(.gray)
+                            }
+                        default:
+                            ProgressView()
+                                .tint(.white)
                         }
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .ignoresSafeArea()
                 }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
         .ignoresSafeArea()
+    }
+}
+
+struct HandDrawnArrow: View {
+    var body: some View {
+        Path { path in
+            path.move(to: CGPoint(x: 2, y: 52))
+            path.addQuadCurve(to: CGPoint(x: 33, y: 2), control: CGPoint(x: 15, y: 20))
+            
+            path.move(to: CGPoint(x: 33, y: 2))
+            path.addLine(to: CGPoint(x: 21, y: 5))
+            
+            path.move(to: CGPoint(x: 33, y: 2))
+            path.addLine(to: CGPoint(x: 30, y: 14))
+        }
+        .stroke(Color.white.opacity(0.9), style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+        .frame(width: 35, height: 55)
+        .shadow(color: .black.opacity(0.4), radius: 3, x: 0, y: 2)
     }
 }

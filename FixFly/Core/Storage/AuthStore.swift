@@ -78,6 +78,9 @@ final class AuthStore: ObservableObject {
             }
 
             await WalletManager.shared.refreshBalance()
+
+            // User changed — re-register the device token under the new account.
+            PushService.shared.onAuthChanged()
         } catch {
             errorText = error.localizedDescription
             TokenStore.shared.clear()

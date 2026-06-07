@@ -51,16 +51,16 @@ struct PhotoProcessingView: View {
                 // Кнопка закрытия
                 HStack {
                     Spacer()
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundStyle(.white.opacity(0.7))
-                            .frame(width: 36, height: 36)
-                            .background(Color.white.opacity(0.1))
-                            .clipShape(Circle())
-                    }
+//                    Button {
+//                        dismiss()
+//                    } label: {
+//                        Image(systemName: "xmark")
+//                            .font(.system(size: 15, weight: .bold))
+//                            .foregroundStyle(.white.opacity(0.7))
+//                            .frame(width: 36, height: 36)
+//                            .background(Color.white.opacity(0.1))
+//                            .clipShape(Circle())
+//                    }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
@@ -79,7 +79,7 @@ struct PhotoProcessingView: View {
                 
                 // Текстовый блок в красивой карточке
                 VStack(spacing: 12) {
-                    Text("AI is generating your masterpiece")
+                    Text("FixFly AI is generating your masterpiece")
                         .font(.system(size: 22, weight: .bold))
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
@@ -104,7 +104,6 @@ struct PhotoProcessingView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 24)
                 
-                // Кнопка уведомлений
                 Button {
                     vm.requestNotificationPermission()
                 } label: {
@@ -142,7 +141,17 @@ struct PhotoProcessingView: View {
                 }
             }
         }
-        .navigationBarHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+            }
+        }
     }
 }
 
@@ -154,19 +163,19 @@ private struct CircularProgressRing: View {
 
     var body: some View {
         ZStack {
-            // Внешнее тонкое вращающееся кольцо (Эффект загрузки)
-            Circle()
-                .trim(from: 0.1, to: 0.9)
-                .stroke(gradient.opacity(0.4), style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [4, 10]))
-                .frame(width: 260, height: 260)
-                .rotationEffect(.degrees(rotation))
-            
-            // Внешнее вращающееся кольцо 2 (в другую сторону)
-            Circle()
-                .trim(from: 0.2, to: 0.8)
-                .stroke(Color.white.opacity(0.2), style: StrokeStyle(lineWidth: 1, lineCap: .round, dash: [2, 8]))
-                .frame(width: 240, height: 240)
-                .rotationEffect(.degrees(-rotation * 1.5))
+//            // Внешнее тонкое вращающееся кольцо (Эффект загрузки)
+//            Circle()
+//                .trim(from: 0.1, to: 0.9)
+//                .stroke(gradient.opacity(0.4), style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [4, 10]))
+//                .frame(width: 260, height: 260)
+//                .rotationEffect(.degrees(rotation))
+//            
+//            // Внешнее вращающееся кольцо 2 (в другую сторону)
+//            Circle()
+//                .trim(from: 0.2, to: 0.8)
+//                .stroke(Color.white.opacity(0.2), style: StrokeStyle(lineWidth: 1, lineCap: .round, dash: [2, 8]))
+//                .frame(width: 240, height: 240)
+//                .rotationEffect(.degrees(-rotation * 1.5))
 
             // Основной фон кольца
             Circle()

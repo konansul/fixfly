@@ -7,8 +7,37 @@ import SwiftUI
 import GoogleSignIn
 import KeychainAccess
 
+final class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
+        // Set the notification delegate early so foreground notifications show
+        // and taps are routed.
+        NotificationManager.shared.configure()
+        return true
+    }
+
+    // APNs returned a device token — hand it to PushService to register with the backend.
+    func application(
+        _ application: UIApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        PushService.shared.handleAPNsToken(deviceToken)
+    }
+
+    func application(
+        _ application: UIApplication,
+        didFailToRegisterForRemoteNotificationsWithError error: Error
+    ) {
+        print("[AppDelegate] remote notification registration failed: \(error)")
+    }
+}
+
 @main
 struct FixFlyApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+
     var body: some Scene {
         WindowGroup {
             AppLoadingView()

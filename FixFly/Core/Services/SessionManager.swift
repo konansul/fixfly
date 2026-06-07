@@ -11,8 +11,6 @@ import Foundation
 @MainActor
 final class SessionManager: ObservableObject {
     static let shared = SessionManager()
- 
-    @Published var hasSeenPhotoGuidelinesThisSession: Bool = false
     
     private init() {}
 }

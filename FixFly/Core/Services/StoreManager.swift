@@ -82,12 +82,19 @@ final class StoreManager: ObservableObject {
             throw StoreError.notAuthenticated
         }
 
-        let result = try await product.purchase()
+        // Tag the purchase with the backend user id (a UUID) so App Store Server
+        // Notifications can be mapped back to this user for renewals.
+        var options: Set<Product.PurchaseOption> = []
+        if let idString = AuthStore.shared.user?.id, let uuid = UUID(uuidString: idString) {
+            options.insert(.appAccountToken(uuid))
+        }
+
+        let result = try await product.purchase(options: options)
 
         switch result {
         case .success(let verification):
             let transaction = try verification.payloadValue
-            try await applyTransactionToBackend(transaction)
+            try await applyTransactionToBackend(transaction, jws: verification.jwsRepresentation)
             await transaction.finish()
 
         case .userCancelled:
@@ -101,18 +108,39 @@ final class StoreManager: ObservableObject {
         }
     }
 
-    func restore() async throws {
+    /// Restores purchases. Consumables (coins) are not restorable by design;
+    /// this re-applies active entitlements (subscriptions) to the backend so
+    /// Pro access is re-granted on a new device / reinstall.
+    /// Returns the number of active entitlements that were restored.
+    @discardableResult
+    func restore() async throws -> Int {
+        guard AuthStore.shared.isAuthed else {
+            throw StoreError.notAuthenticated
+        }
+
+        // Pull the latest entitlement state from the App Store.
         try await AppStore.sync()
+
+        var restoredCount = 0
+        for await result in Transaction.currentEntitlements {
+            guard case .verified(let transaction) = result else { continue }
+            guard transaction.revocationDate == nil else { continue }
+
+            try? await applyTransactionToBackend(transaction, jws: result.jwsRepresentation)
+            restoredCount += 1
+        }
+        return restoredCount
     }
 
-    private func applyTransactionToBackend(_ transaction: StoreKit.Transaction) async throws {
+    private func applyTransactionToBackend(_ transaction: StoreKit.Transaction, jws: String) async throws {
         let transactionId = String(transaction.id)
         let originalTransactionId = String(transaction.originalID)
 
         try await WalletManager.shared.applyPurchase(
             productId: transaction.productID,
             transactionId: transactionId,
-            originalTransactionId: originalTransactionId
+            originalTransactionId: originalTransactionId,
+            signedTransaction: jws
         )
     }
 
@@ -123,7 +151,7 @@ final class StoreManager: ObservableObject {
                 do {
                     let transaction = try result.payloadValue
                     if AuthStore.shared.isAuthed {
-                        try await applyTransactionToBackend(transaction)
+                        try await applyTransactionToBackend(transaction, jws: result.jwsRepresentation)
                     }
                     await transaction.finish()
                 } catch {

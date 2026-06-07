@@ -12,7 +12,7 @@ struct PlanRow: View {
     var subtitle: String? = nil
     let badge: String
     let rightTop: String
-    let rightBottom: String
+    let rightBottom: AnyView
     let isSelected: Bool
     let onTap: () -> Void
 
@@ -47,7 +47,7 @@ struct PlanRow: View {
                     Text(rightTop)
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(.white.opacity(0.65))
-                    Text(rightBottom)
+                    rightBottom
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(.white)
                 }

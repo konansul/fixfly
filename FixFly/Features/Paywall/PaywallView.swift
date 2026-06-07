@@ -241,31 +241,55 @@ struct PaywallView: View {
     }
 
     private var subscriptionSection: some View {
-        VStack(spacing: 12) {
-            PlanRow(
-                title: "Weekly",
-                subtitle: "2,400 Coins",
-                badge: vm.activeSubscriptionId == PaywallItemType.weeklySub.rawValue ? "Current Plan" : "Popular",
-                rightTop: "per week",
-                rightBottom: "$6.99",
-                isSelected: vm.selectedProductId == PaywallItemType.weeklySub.rawValue
-            ) {
-                vm.selectedProductId = PaywallItemType.weeklySub.rawValue
-            }
+            VStack(spacing: 12) {
+                PlanRow(
+                    title: "Weekly",
+                    subtitle: "2,400 Coins",
+                    badge: vm.activeSubscriptionId == PaywallItemType.weeklySub.rawValue ? "Current Plan" : "Popular",
+                    rightTop: "per week",
+                    // Оборачиваем HStack в AnyView
+                    rightBottom: AnyView(
+                        HStack(spacing: 4) {
+                            Text("$10.00")
+                                .font(.system(size: 14, weight: .regular))
+                                .foregroundStyle(.white.opacity(0.6))
+                                .strikethrough(true, color: .white.opacity(0.6))
+                            
+                            Text("$6.99")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(.white)
+                        }
+                    ),
+                    isSelected: vm.selectedProductId == PaywallItemType.weeklySub.rawValue
+                ) {
+                    vm.selectedProductId = PaywallItemType.weeklySub.rawValue
+                }
 
-            PlanRow(
-                title: "Monthly",
-                subtitle: "7,200 Coins",
-                badge: vm.activeSubscriptionId == PaywallItemType.monthlySub.rawValue ? "Current Plan" : "Best Value",
-                rightTop: "per month",
-                rightBottom: "$16.99",
-                isSelected: vm.selectedProductId == PaywallItemType.monthlySub.rawValue
-            ) {
-                vm.selectedProductId = PaywallItemType.monthlySub.rawValue
+                PlanRow(
+                    title: "Monthly",
+                    subtitle: "7,200 Coins",
+                    badge: vm.activeSubscriptionId == PaywallItemType.monthlySub.rawValue ? "Current Plan" : "Best Value",
+                    rightTop: "per month",
+                    // Оборачиваем HStack в AnyView
+                    rightBottom: AnyView(
+                        HStack(spacing: 4) {
+                            Text("$25.00")
+                                .font(.system(size: 14, weight: .regular))
+                                .foregroundStyle(.white.opacity(0.6))
+                                .strikethrough(true, color: .white.opacity(0.6))
+                            
+                            Text("$16.99")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(.white)
+                        }
+                    ),
+                    isSelected: vm.selectedProductId == PaywallItemType.monthlySub.rawValue
+                ) {
+                    vm.selectedProductId = PaywallItemType.monthlySub.rawValue
+                }
             }
+            .padding(.top, 6)
         }
-        .padding(.top, 6)
-    }
 
     private var coinSection: some View {
         VStack(spacing: 12) {

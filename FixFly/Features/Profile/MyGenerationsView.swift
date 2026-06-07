@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MyGenerationsView: View {
     @StateObject private var vm = MyGenerationsViewModel()
+    @ObservedObject private var router = DeepLinkRouter.shared
     @State private var selectedItemForCompare: GenerationItemDTO?
     @State private var showSettings = false
     @State private var showCoinsSheet = false
@@ -130,7 +131,30 @@ struct MyGenerationsView: View {
                     await vm.load(force: true)
                 }
             }
+            .task(id: router.pendingGenerationTaskId) {
+                guard router.pendingGenerationTaskId != nil else { return }
+                await openPendingGeneration()
+            }
         }
+    }
+
+    /// Opens the result for the generation a tapped push points to.
+    private func openPendingGeneration() async {
+        guard let taskId = router.pendingGenerationTaskId else { return }
+
+        // The generation is likely brand-new, so refresh to be sure it's loaded.
+        if vm.items.first(where: { $0.id == taskId }) == nil {
+            await vm.load(force: true)
+        }
+
+        if let item = vm.items.first(where: { $0.id == taskId }),
+           item.status == "done",
+           let outUrl = item.outputUrl, outUrl.count > 25 {
+            vm.markAsViewed(item.id)
+            selectedItemForCompare = item
+        }
+
+        router.pendingGenerationTaskId = nil
     }
     
     private var titleSection: some View {

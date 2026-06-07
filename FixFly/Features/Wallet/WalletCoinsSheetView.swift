@@ -18,7 +18,6 @@ struct CoinsWalletSheetView: View {
                             VStack(spacing: 10) {
                                 balanceHero
 
-                                // ИСПРАВЛЕННАЯ ЛОГИКА:
                                 if let errorText = store.errorText {
                                     // 1. Если есть ошибка — показываем только её
                                     errorCard(errorText)

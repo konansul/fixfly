@@ -36,7 +36,8 @@ final class WalletManager: ObservableObject {
     func applyPurchase(
         productId: String,
         transactionId: String,
-        originalTransactionId: String?
+        originalTransactionId: String?,
+        signedTransaction: String
     ) async throws {
 
         let payload = ApplyPurchaseRequest(
@@ -46,7 +47,8 @@ final class WalletManager: ObservableObject {
             originalTransactionId: originalTransactionId,
             amountCents: nil,
             currency: nil,
-            raw: [:]
+            raw: [:],
+            signedTransaction: signedTransaction
         )
 
         let response = try await WalletAPI.shared.applyPurchase(payload)

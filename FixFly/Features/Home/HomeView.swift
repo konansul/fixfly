@@ -41,7 +41,11 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.black.ignoresSafeArea()
+//                Color.clear.fixFlyBackground()
+//                    .ignoresSafeArea()
+//                    .allowsHitTesting(false)
+//                    .zIndex(0)
+
 
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 24) {
@@ -76,9 +80,10 @@ struct HomeView: View {
                         Spacer(minLength: 40)
                     }
                 }
+                .zIndex(1)
 
                 if vm.isLoading && vm.home == nil {
-                    ProgressView().tint(.white)
+                    ProgressView().tint(.white).zIndex(2)
                 }
             }
             .ignoresSafeArea()
@@ -213,7 +218,9 @@ struct SectionGridView: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea().fixFlyBackground()
+            Color.clear.fixFlyBackground()
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
             
             ScrollView(.vertical, showsIndicators: false) {
                 LazyVGrid(columns: columns, spacing: 14) {

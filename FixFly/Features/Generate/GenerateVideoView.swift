@@ -21,7 +21,6 @@ struct GenerateVideoFormView: View {
     @State private var finalResultVideoUrl: String?
     @State private var showResult = false
     
-    @State private var showGuidelinesSheet = false
     @State private var showRealPhotoPicker = false
     
     let styles = ["None", "Cinematic", "Anime", "Cyberpunk", "3D Render", "Digital Art"]
@@ -114,14 +113,6 @@ struct GenerateVideoFormView: View {
                     self.showResult = true
                 }
             })
-            .presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $showGuidelinesSheet) {
-            PhotoGuidelinesSheetView {
-                showRealPhotoPicker = true
-            }
-            .presentationBackground(.black)
-            .presentationDetents([.fraction(0.65)])
             .presentationDragIndicator(.visible)
         }
         .photosPicker(
@@ -220,11 +211,7 @@ struct GenerateVideoFormView: View {
                 
                 if !selectedImages.isEmpty {
                     Button {
-                        if SessionManager.shared.hasSeenPhotoGuidelinesThisSession {
-                            showRealPhotoPicker = true
-                        } else {
-                            showGuidelinesSheet = true
-                        }
+                        showRealPhotoPicker = true
                     } label: {
                         Text("Edit")
                             .font(.system(size: 14, weight: .medium))
@@ -269,11 +256,7 @@ struct GenerateVideoFormView: View {
                 }
             } else {
                 Button {
-                    if SessionManager.shared.hasSeenPhotoGuidelinesThisSession {
-                        showRealPhotoPicker = true
-                    } else {
-                        showGuidelinesSheet = true
-                    }
+                    showRealPhotoPicker = true
                 } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "photo.badge.plus")

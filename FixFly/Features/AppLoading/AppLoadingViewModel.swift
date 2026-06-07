@@ -34,6 +34,9 @@ final class AppLoadingViewModel: ObservableObject {
 
         _ = await (bootstrapTask, homePreloadTask)
 
+        // JWT is ready now — register any cached APNs token with the backend.
+        await PushService.shared.syncIfPossible()
+
         withAnimation(.easeOut(duration: 0.35)) {
             progress = 1
         }
