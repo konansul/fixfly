@@ -104,23 +104,26 @@ struct PhotoProcessingView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 24)
                 
-                Button {
-                    vm.requestNotificationPermission()
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: vm.notificationStatus == .notDetermined ? "bell.badge.fill" : "bell.slash.fill")
-                        Text(vm.notificationStatus == .notDetermined ? "Notify Me When Ready" : "Unsubscribe")
+                // Only offer the prompt while we can still ask. Once enabled
+                // (or denied) the button is hidden — no pointless "Unsubscribe".
+                if vm.notificationStatus == .notDetermined {
+                    Button {
+                        vm.requestNotificationPermission()
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "bell.badge.fill")
+                            Text("Notify Me When Ready")
+                        }
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 56)
+                        .background(Color.white)
+                        .clipShape(Capsule())
                     }
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(vm.notificationStatus == .authorized ? .white.opacity(0.5) : .black)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 56)
-                    .background(vm.notificationStatus == .authorized ? AnyShapeStyle(Color.white.opacity(0.1)) : AnyShapeStyle(Color.white))
-                    .clipShape(Capsule())
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 30)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 30)
-                .disabled(vm.notificationStatus == .authorized)
             }
         }
         .onAppear {

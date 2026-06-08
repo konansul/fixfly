@@ -32,6 +32,15 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     ) {
         print("[AppDelegate] remote notification registration failed: \(error)")
     }
+
+    // Re-engagement: arm "come back" reminders when leaving, clear them on return.
+    func applicationDidEnterBackground(_ application: UIApplication) {
+        NotificationManager.shared.scheduleReengagementReminders()
+    }
+
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        NotificationManager.shared.cancelReengagementReminders()
+    }
 }
 
 @main
