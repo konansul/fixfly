@@ -95,6 +95,44 @@ final class NotificationManager: NSObject, ObservableObject {
             status = .denied
         }
     }
+
+    // MARK: - Re-engagement reminders ("we miss you")
+
+    private static let reengageIDs = ["fixfly.reengage.3d", "fixfly.reengage.7d"]
+
+    /// Schedule local "come back" reminders for 3 and 7 days from now (at 18:00
+    /// local time). Call when the app goes to background; they only ever fire if
+    /// the user doesn't return (we cancel them on the next launch/foreground).
+    func scheduleReengagementReminders() {
+        cancelReengagementReminders()
+
+        let reminders: [(id: String, days: Int, title: String, body: String)] = [
+            ("fixfly.reengage.3d", 3, "We miss you 👋", "Your next AI masterpiece is one tap away — come create something new!"),
+            ("fixfly.reengage.7d", 7, "New styles are waiting ✨", "Jump back into FixFly and turn your photo into something epic.")
+        ]
+
+        let calendar = Calendar.current
+        for reminder in reminders {
+            guard let fireDate = calendar.date(byAdding: .day, value: reminder.days, to: Date()) else { continue }
+            var comps = calendar.dateComponents([.year, .month, .day], from: fireDate)
+            comps.hour = 18
+            comps.minute = 0
+
+            let content = UNMutableNotificationContent()
+            content.title = reminder.title
+            content.body = reminder.body
+            content.sound = .default
+
+            let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
+            let request = UNNotificationRequest(identifier: reminder.id, content: content, trigger: trigger)
+            center.add(request)
+        }
+    }
+
+    /// Cancel pending re-engagement reminders — call when the user returns.
+    func cancelReengagementReminders() {
+        center.removePendingNotificationRequests(withIdentifiers: Self.reengageIDs)
+    }
 }
 
 // MARK: - UNUserNotificationCenterDelegate

@@ -62,6 +62,8 @@ struct RemoteCardItem: Decodable, Identifiable, Hashable {
     let styleId: String?
     let prompt: String?
     let resultType: MediaType?
+    /// Recently added — shown first in Library with a "NEW" badge.
+    let isNew: Bool?
 
     var actualResultType: MediaType {
         return resultType ?? mediaType
