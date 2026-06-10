@@ -39,6 +39,11 @@ struct PaywallView: View {
             }
         }
         .task { await vm.loadProducts() }
+        .onChange(of: vm.errorText) { _, newValue in
+            if newValue != nil {
+                UINotificationFeedbackGenerator().notificationOccurred(.error)
+            }
+        }
         .alert(
             "Purchase failed",
             isPresented: Binding(
@@ -116,22 +121,26 @@ struct PaywallView: View {
             Button {
                 Task {
                     let success = await vm.purchaseSelected()
-                    if success { dismiss() }
+                    if success {
+                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+                        dismiss()
+                    }
                 }
             } label: {
                 ZStack {
                     if vm.isPurchasing {
-                        ProgressView().tint(.black)
+                        ProgressView().tint(.white)
                     } else {
                         Text(buttonTitle)
                             .font(.system(size: 18, weight: .bold))
-                            .foregroundStyle(.black)
+                            .foregroundStyle(.white)
                     }
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: 58)
-                .background(isCurrentPlanSelected ? Color.white.opacity(0.5) : Color.white)
+                .background(FixFlyGradient.linear)
                 .clipShape(Capsule())
+                .opacity(isCurrentPlanSelected ? 0.45 : 1.0)
             }
             .buttonStyle(.plain)
             .disabled(vm.isPurchasing || isCurrentPlanSelected)
@@ -144,6 +153,13 @@ struct PaywallView: View {
         }
     }
     
+    /// Selects a product with the subtle selection tick (skips re-selection).
+    private func select(_ productId: String) {
+        guard vm.selectedProductId != productId else { return }
+        UISelectionFeedbackGenerator().selectionChanged()
+        vm.selectedProductId = productId
+    }
+
     private var buttonTitle: String {
         if isCurrentPlanSelected {
             return "Current Plan"
@@ -155,58 +171,19 @@ struct PaywallView: View {
     }
 
     private var modeSwitcher: some View {
-        let isSub = vm.selectedProductId.contains("sub")
-        return ZStack {
-            Capsule()
-                .fill(Color.white.opacity(0.08))
-
-            GeometryReader { geo in
-                let halfWidth = geo.size.width / 2
-                Capsule()
-                    .fill(Color.white.opacity(0.16))
-                    .frame(width: halfWidth - 4)
-                    .offset(x: isSub ? 4 : halfWidth)
-                    .animation(.easeInOut(duration: 0.35), value: isSub)
-            }
-            .padding(.vertical, 4)
-
-            HStack(spacing: 0) {
-                Button {
-                    if !isSub {
-                        triggerHaptic()
+        GlassPillSwitcher(
+            options: ["Subscription", "Coins"],
+            selectedIndex: Binding(
+                get: { vm.selectedProductId.contains("sub") ? 0 : 1 },
+                set: { index in
+                    if index == 0 {
                         vm.selectedProductId = vm.activeSubscriptionId ?? PaywallItemType.weeklySub.rawValue
-                    }
-                } label: {
-                    Text("Subscription")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                }
-                .buttonStyle(.plain)
-                
-                Button {
-                    if isSub {
-                        triggerHaptic()
+                    } else {
                         vm.selectedProductId = PaywallItemType.coins1200.rawValue
                     }
-                } label: {
-                    Text("Coins")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
                 }
-                .buttonStyle(.plain)
-            }
-        }
-        .frame(height: 52)
-        .clipShape(Capsule())
-    }
-
-    private func triggerHaptic() {
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.impactOccurred()
+            )
+        )
     }
 
     private var benefitsSection: some View {
@@ -262,7 +239,7 @@ struct PaywallView: View {
                     ),
                     isSelected: vm.selectedProductId == PaywallItemType.weeklySub.rawValue
                 ) {
-                    vm.selectedProductId = PaywallItemType.weeklySub.rawValue
+                    select(PaywallItemType.weeklySub.rawValue)
                 }
 
                 PlanRow(
@@ -285,7 +262,7 @@ struct PaywallView: View {
                     ),
                     isSelected: vm.selectedProductId == PaywallItemType.monthlySub.rawValue
                 ) {
-                    vm.selectedProductId = PaywallItemType.monthlySub.rawValue
+                    select(PaywallItemType.monthlySub.rawValue)
                 }
             }
             .padding(.top, 6)
@@ -300,7 +277,7 @@ struct PaywallView: View {
                 rightBottom: "$4.99",
                 isSelected: vm.selectedProductId == PaywallItemType.coins1200.rawValue
             ) {
-                vm.selectedProductId = PaywallItemType.coins1200.rawValue
+                select(PaywallItemType.coins1200.rawValue)
             }
 
             CoinRow(
@@ -310,7 +287,7 @@ struct PaywallView: View {
                 rightBottom: "$9.99",
                 isSelected: vm.selectedProductId == PaywallItemType.coins3000.rawValue
             ) {
-                vm.selectedProductId = PaywallItemType.coins3000.rawValue
+                select(PaywallItemType.coins3000.rawValue)
             }
 
             CoinRow(
@@ -320,7 +297,7 @@ struct PaywallView: View {
                 rightBottom: "$19.99",
                 isSelected: vm.selectedProductId == PaywallItemType.coins7200.rawValue
             ) {
-                vm.selectedProductId = PaywallItemType.coins7200.rawValue
+                select(PaywallItemType.coins7200.rawValue)
             }
         }
         .padding(.top, 6)

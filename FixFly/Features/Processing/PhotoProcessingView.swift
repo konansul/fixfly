@@ -138,6 +138,7 @@ struct PhotoProcessingView: View {
         }
         .onChange(of: vm.isProcessingComplete) { oldValue, completed in
             if completed {
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
                 if let url = vm.outputUrl, let onComplete = onComplete {
                     onComplete(url)
                 } else {

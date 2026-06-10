@@ -195,6 +195,7 @@ struct HomeView: View {
     }
 
     private func onCardTap(section: HomeSectionDTO, item: RemoteCardItem) {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
         let allItems = section.type == .carouselTabs ? itemsForSelectedTab(sectionId: section.id, tabs: section.tabs ?? []) : (section.items ?? [])
         let index = allItems.firstIndex(where: { $0.id == item.id }) ?? 0
         
@@ -226,6 +227,7 @@ struct SectionGridView: View {
                 LazyVGrid(columns: columns, spacing: 14) {
                     ForEach(items) { item in
                         Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             let index = items.firstIndex(where: { $0.id == item.id }) ?? 0
                             feedNavData = FeedNavigationData(templates: items, sectionId: sectionId, currentIndex: index)
                         } label: {
@@ -289,7 +291,7 @@ struct GridRemoteMediaCard: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(Color.black.opacity(0.6))
+                    .background(Color.black.opacity(0.3))
                     .clipShape(Capsule())
                     .padding(8)
             }

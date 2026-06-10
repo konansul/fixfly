@@ -40,9 +40,9 @@ private struct GlowBlobsBackground: View {
 
     /// Anchor hues the blobs cycle through: blue → pink → purple → (loops).
     private static let hueCycle: [SIMD3<Double>] = [
-        SIMD3(0.12, 0.22, 0.60),   // blue
-        SIMD3(0.62, 0.14, 0.45),   // pink / magenta
-        SIMD3(0.34, 0.12, 0.62),   // purple
+        SIMD3(0.15, 0.35, 0.98),   // blue
+        SIMD3(0.98, 0.20, 0.68),   // pink / magenta
+        SIMD3(0.58, 0.18, 0.98),   // purple
     ]
 
     /// One breath (fade out → re-ignite) per blob.
@@ -93,7 +93,7 @@ private struct GlowBlobsBackground: View {
         return Circle()
             .fill(
                 RadialGradient(
-                    colors: [color.opacity(0.70), color.opacity(0)],
+                    colors: [color.opacity(0.85), color.opacity(0)],
                     center: .center,
                     startRadius: 0,
                     endRadius: r

@@ -47,6 +47,10 @@ final class ClientAPI {
 
         var req = URLRequest(url: url)
         req.httpMethod = method
+        // API responses are always dynamic. Without this, URLCache heuristically
+        // caches GETs (the backend sends no Cache-Control), so pull-to-refresh
+        // can keep returning a stale list until the app restarts.
+        req.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
         req.setValue("application/json", forHTTPHeaderField: "Accept")
 
         if requiresAuth {
