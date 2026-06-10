@@ -170,12 +170,6 @@ struct LibraryView: View {
                 LibraryGridRemoteMediaCard(item: item)
                     .frame(height: cardHeight)
                     .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(alignment: .topTrailing) {
-                        if item.isNew == true {
-                            RecentBadge()
-                                .padding(10)
-                        }
-                    }
 
                 LinearGradient(
                     colors: [.clear, .black.opacity(0.6)],

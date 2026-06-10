@@ -3,132 +3,142 @@
 //
 //  Created by Kanan Sultanov on 12.03.26.
 //
-//  Animated, Gemini-style mesh gradient. A coloured glow sits at the top and
-//  fades into TRUE black, then stays flat black for the rest of the screen.
+//  Soft animated glow background, in the spirit of PhotoProcessingView's
+//  pulsing blurred circle. Three glow blobs (blue / pink / purple) live in
+//  the top third of the screen over a muted near-black base. Each blob
+//  breathes — fades out and re-ignites on a ~3.5 s cycle — and slowly
+//  re-colours along the blue → pink → purple loop. The pulse and colour
+//  phases are offset by a third per blob, so all three hues are always on
+//  screen at once and the colours appear to wander between the blobs.
 //
-//  The whole screen is ONE mesh — there is no clipped frame and no separate
-//  black layer underneath. That matters: a clipped mesh's bottom edge is a
-//  slightly-lifted "near black" (GPU interpolates in linear space), and where
-//  that meets a real `Color.black` you get a visible horizontal seam, very
-//  noticeable on OLED. By letting the mesh itself reach pure black across two
-//  bottom rows, the lower half is a single uniform black with no seam.
+//  The blobs are radial-gradient fills rather than `.blur`-ed circles:
+//  visually the same soft glow, but far cheaper to animate every frame.
+//  A vertical mask fades the glow layer out by mid-screen, so the lower
+//  half stays one uniform muted dark with no seam.
 //
 
 import SwiftUI
 
 struct FixFlyBackground: View {
-    // Kept for source compatibility with existing call sites. No longer used —
-    // the glow is now shaped by the mesh itself, full-screen.
+    // Kept for source compatibility with existing call sites. No longer used.
     var height: CGFloat = 440
     var startFade: CGFloat = 0.20
     var imageName: String = "fixfly_bg"
 
     var body: some View {
-        AnimatedMeshBackground()
+        GlowBlobsBackground()
             .ignoresSafeArea()
     }
 }
 
-// MARK: - Animated mesh gradient
+// MARK: - Glow blobs
 
-/// A 3×4 `MeshGradient` filling the whole screen. The top carries the colour
-/// glow which fades into a single MUTED dark tone by ~40% of the height, and
-/// that same muted tone fills the rest of the screen. It is NOT pure black and
-/// NOT a separate layer — it is two bottom rows of the same mesh, so the lower
-/// region is one uniform tone with no seam to perceive. Control points and
-/// colours animate slowly so the glow keeps morphing like a video.
-private struct AnimatedMeshBackground: View {
+private struct GlowBlobsBackground: View {
 
-    /// The "black" of the app: a muted near-black, never true `(0,0,0)`.
-    /// Both bottom rows use this exact value, so the whole lower area is flat
-    /// and identical — no seam, no OLED-true-black edge.
-    private static let mutedDark = SIMD3<Float>(0.008, 0.008, 0.012)
+    /// The "black" of the app: muted near-black, never true `(0,0,0)`.
+    private static let baseColor = Color(red: 0.008, green: 0.008, blue: 0.012)
 
-    // 12 colours, row-major (3 wide × 4 tall).
-    // Rows 0–1: glow. Rows 2–3: the muted dark tone.
-    private let paletteA: [SIMD3<Float>] = [
-        // row 0 (top) — glow
-        SIMD3<Float>(0.10, 0.18, 0.45),   // blue
-        SIMD3<Float>(0.26, 0.10, 0.46),   // purple
-        SIMD3<Float>(0.42, 0.12, 0.38),   // magenta
-        // row 1
-        SIMD3<Float>(0.11, 0.24, 0.46),   // blue
-        SIMD3<Float>(0.28, 0.12, 0.46),   // violet
-        SIMD3<Float>(0.08, 0.33, 0.40),   // teal
-        // row 2 (muted dark — fade completes here)
-        mutedDark, mutedDark, mutedDark,
-        // row 3 (same muted dark)
-        mutedDark, mutedDark, mutedDark
+    /// Anchor hues the blobs cycle through: blue → pink → purple → (loops).
+    private static let hueCycle: [SIMD3<Double>] = [
+        SIMD3(0.12, 0.22, 0.60),   // blue
+        SIMD3(0.62, 0.14, 0.45),   // pink / magenta
+        SIMD3(0.34, 0.12, 0.62),   // purple
     ]
-    private let paletteB: [SIMD3<Float>] = [
-        // row 0
-        SIMD3<Float>(0.26, 0.10, 0.46),   // purple
-        SIMD3<Float>(0.42, 0.12, 0.38),   // magenta
-        SIMD3<Float>(0.08, 0.33, 0.40),   // teal
-        // row 1
-        SIMD3<Float>(0.28, 0.12, 0.46),   // violet
-        SIMD3<Float>(0.10, 0.18, 0.45),   // blue
-        SIMD3<Float>(0.26, 0.10, 0.46),   // purple
-        // row 2 (muted dark)
-        mutedDark, mutedDark, mutedDark,
-        // row 3 (muted dark)
-        mutedDark, mutedDark, mutedDark
+
+    /// One breath (fade out → re-ignite) per blob.
+    private static let pulsePeriod: Double = 3.5
+    /// Full blue → pink → purple → blue colour loop per blob.
+    private static let colorPeriod: Double = 10.0
+
+    /// Blob layout in unit coordinates; radius is a fraction of screen width.
+    /// `phase` (in thirds) offsets both the pulse and the colour position, so
+    /// the three blobs are always at different points of both cycles.
+    private struct Blob {
+        let center: CGPoint
+        let radius: CGFloat
+        let phase: Double
+    }
+
+    private static let blobs: [Blob] = [
+        Blob(center: CGPoint(x: 0.18, y: 0.08), radius: 0.62, phase: 0.0),
+        Blob(center: CGPoint(x: 0.84, y: 0.05), radius: 0.55, phase: 1.0 / 3.0),
+        Blob(center: CGPoint(x: 0.52, y: 0.20), radius: 0.68, phase: 2.0 / 3.0),
     ]
 
     var body: some View {
         TimelineView(.animation) { timeline in
-            let t = Float(timeline.date.timeIntervalSinceReferenceDate)
-            MeshGradient(
-                width: 3,
-                height: 4,
-                points: points(at: t),
-                colors: colors(at: t),
-                smoothsColors: true
+            let t = timeline.date.timeIntervalSinceReferenceDate
+            GeometryReader { geo in
+                ZStack {
+                    Self.baseColor
+
+                    ZStack {
+                        ForEach(0..<Self.blobs.count, id: \.self) { i in
+                            blobView(Self.blobs[i], at: t, in: geo.size)
+                        }
+                    }
+                    .mask(topFadeMask)
+                }
+            }
+        }
+    }
+
+    /// One glowing blob: a radial colour-to-clear gradient that breathes
+    /// (opacity + scale) and slowly re-colours along the hue cycle.
+    private func blobView(_ blob: Blob, at t: Double, in size: CGSize) -> some View {
+        let pulse = breath(at: t, phase: blob.phase)
+        let color = hue(at: t, phase: blob.phase)
+        let r = blob.radius * size.width
+
+        return Circle()
+            .fill(
+                RadialGradient(
+                    colors: [color.opacity(0.70), color.opacity(0)],
+                    center: .center,
+                    startRadius: 0,
+                    endRadius: r
+                )
             )
-        }
+            .frame(width: r * 2, height: r * 2)
+            .scaleEffect(0.92 + 0.16 * pulse)
+            .opacity(0.30 + 0.70 * pulse)
+            .position(x: blob.center.x * size.width, y: blob.center.y * size.height)
     }
 
-    /// Per-cell crossfade between the two palettes. Muted-dark cells stay muted
-    /// dark, so the lower half never lights up.
-    private func colors(at t: Float) -> [Color] {
-        (0..<12).map { i in
-            let phase = Float(i) * 0.8
-            let m = (sin(t * 0.45 + phase) + 1) / 2   // 0…1
-            let a = paletteA[i]
-            let b = paletteB[i]
-            let c = a + (b - a) * m
-            return Color(red: Double(c.x), green: Double(c.y), blue: Double(c.z))
-        }
+    /// 0…1 breathing curve. Phases are a third apart, so when one blob is at
+    /// its dimmest another is near its brightest — the glow never dies out.
+    private func breath(at t: Double, phase: Double) -> Double {
+        0.5 + 0.5 * sin(2 * .pi * (t / Self.pulsePeriod + phase))
     }
 
-    /// Outer corners are pinned and the side columns keep x = 0 / x = 1 so the
-    /// rectangle is always fully filled. Only mid-column points drift, plus a
-    /// little vertical breathing on the colour band (row 1). Rows 2–3 are fixed.
-    private func points(at t: Float) -> [SIMD2<Float>] {
-        let a: Float = 0.12   // horizontal drift of mid-column points
-        func osc(_ freq: Float, _ phase: Float) -> Float { sin(t * freq + phase) }
+    /// Current colour of a blob: position along the blue → pink → purple loop,
+    /// blended between the two nearest anchors. The same third-of-a-cycle
+    /// phase offset keeps all three hues on screen simultaneously.
+    private func hue(at t: Double, phase: Double) -> Color {
+        let n = Double(Self.hueCycle.count)
+        var pos = (t / Self.colorPeriod + phase) * n
+        pos = pos.truncatingRemainder(dividingBy: n)
+        if pos < 0 { pos += n }
+        let i = Int(pos) % Self.hueCycle.count
+        let j = (i + 1) % Self.hueCycle.count
+        let f = pos - pos.rounded(.down)
+        let rgb = Self.hueCycle[i] + (Self.hueCycle[j] - Self.hueCycle[i]) * f
+        return Color(red: rgb.x, green: rgb.y, blue: rgb.z)
+    }
 
-        let y1: Float = 0.16   // colour band
-        let y2: Float = 0.40   // muted dark starts here (and stays so below)
-
-        return [
-            // row 0 (y = 0)
-            SIMD2<Float>(0, 0),
-            SIMD2<Float>(0.5 + a * osc(0.45, 0.0), 0.0),
-            SIMD2<Float>(1, 0),
-            // row 1 (colour band, gentle drift + breathing)
-            SIMD2<Float>(0.0, y1),
-            SIMD2<Float>(0.5 + a * osc(0.40, 2.0), y1 + 0.04 * osc(0.30, 1.0)),
-            SIMD2<Float>(1.0, y1),
-            // row 2 (muted dark, fixed)
-            SIMD2<Float>(0.0, y2),
-            SIMD2<Float>(0.5, y2),
-            SIMD2<Float>(1.0, y2),
-            // row 3 (y = 1, muted dark, fixed)
-            SIMD2<Float>(0, 1),
-            SIMD2<Float>(0.5, 1),
-            SIMD2<Float>(1, 1)
-        ]
+    /// Confines the glow to the top of the screen: fully visible down to 25%
+    /// of the height, gone by 50%. Below that the base colour shows through
+    /// untouched, so the lower half is one flat tone.
+    private var topFadeMask: some View {
+        LinearGradient(
+            stops: [
+                .init(color: .white, location: 0.0),
+                .init(color: .white, location: 0.25),
+                .init(color: .clear, location: 0.50),
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
     }
 }
 
