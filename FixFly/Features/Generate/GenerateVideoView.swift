@@ -335,15 +335,9 @@ struct GenerateVideoFormView: View {
             .padding(.trailing, 8)
             .frame(maxWidth: .infinity)
             .frame(height: 60)
-            .background(
-                LinearGradient(
-                    colors: [Color(red: 0.55, green: 0.25, blue: 1.0), Color(red: 1.0, green: 0.35, blue: 0.85)],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
+            .background(FixFlyGradient.linear)
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .shadow(color: Color(red: 0.55, green: 0.25, blue: 1.0).opacity(0.3), radius: 10, y: 5)
+            .shadow(color: FixFlyGradient.purple.opacity(0.3), radius: 10, y: 5)
         }
         .disabled(prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isGenerating)
         .opacity(prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1.0)
@@ -365,6 +359,7 @@ struct GenerateVideoFormView: View {
     }
     
     private func startGeneration() {
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         isPromptFocused = false
         isGenerating = true
         

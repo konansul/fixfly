@@ -58,7 +58,12 @@ struct PlanRow: View {
                     .fill(Color.black.opacity(isSelected ? 0.55 : 0.30))
                     .overlay(
                         RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(Color.white.opacity(isSelected ? 0.85 : 0.12), lineWidth: isSelected ? 2 : 1)
+                            .stroke(
+                                isSelected
+                                    ? AnyShapeStyle(FixFlyGradient.linear)
+                                    : AnyShapeStyle(Color.white.opacity(0.12)),
+                                lineWidth: isSelected ? 2 : 1
+                            )
                     )
             )
         }
@@ -113,7 +118,12 @@ struct CoinRow: View {
                     .fill(Color.black.opacity(isSelected ? 0.55 : 0.30))
                     .overlay(
                         RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(Color.white.opacity(isSelected ? 0.85 : 0.12), lineWidth: isSelected ? 2 : 1)
+                            .stroke(
+                                isSelected
+                                    ? AnyShapeStyle(FixFlyGradient.linear)
+                                    : AnyShapeStyle(Color.white.opacity(0.12)),
+                                lineWidth: isSelected ? 2 : 1
+                            )
                     )
             )
         }

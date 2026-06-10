@@ -8,13 +8,22 @@
 import SwiftUI
 
 enum AppTab: Hashable {
-    case home, library, generate, profile, search
+    case home, library, generate, profile
 }
 
 struct MainTabView: View {
     @StateObject private var auth = AuthStore.shared
     @ObservedObject private var router = DeepLinkRouter.shared
     @State private var selection: AppTab = .home
+
+    // "apple.intelligence" only exists from iOS 18.1 (SF Symbols 6.1).
+    private var generateIcon: String {
+        if #available(iOS 18.1, *) {
+            return "apple.intelligence"
+        } else {
+            return "sparkles"
+        }
+    }
 
     var body: some View {
         TabView(selection: $selection) {
@@ -26,16 +35,12 @@ struct MainTabView: View {
                 LibraryView()
             }
 
-            Tab("Generate", systemImage: "apple.intelligence", value: AppTab.generate) {
+            Tab("Generate", systemImage: generateIcon, value: AppTab.generate) {
                 GenerateView()
             }
 
             Tab("Profile", systemImage: "person.crop.circle", value: AppTab.profile) {
                 MyGenerationsView()
-            }
-
-            Tab(value: AppTab.search, role: .search) {
-                LibraryView(activateSearchOnAppear: true)
             }
         }
         .tint(.white)

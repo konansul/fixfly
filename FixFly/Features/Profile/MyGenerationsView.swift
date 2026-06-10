@@ -117,10 +117,11 @@ struct MyGenerationsView: View {
                 SettingsView()
             }
             .onAppear {
+                // Always refetch: a generation may have finished while the
+                // user was elsewhere in the app, and nothing else refreshes
+                // this list when the processing screen was closed early.
                 Task {
-                    if vm.items.isEmpty {
-                        await vm.load(force: false)
-                    }
+                    await vm.load(force: true)
                 }
             }
             .refreshable {
@@ -259,9 +260,7 @@ struct RecentBadge: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 3)
 //            .background(Color("backgroundcolor"))
-            .background(
-                LinearGradient(colors: [.purple, .pink], startPoint: .leading, endPoint: .trailing)
-            )
+            .background(FixFlyGradient.linear)
 //            .background(
 //                LinearGradient(
 //                    colors: [

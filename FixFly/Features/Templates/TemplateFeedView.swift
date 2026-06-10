@@ -185,9 +185,12 @@ struct TemplateFeedView: View {
             }
         }
         .onAppear {
-            // ВАЖНО: Разрешаем звуку играть, даже если айфон в беззвучном режиме
-            try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
-            try? AVAudioSession.sharedInstance().setActive(true)
+            // ВАЖНО: Разрешаем звуку играть, даже если айфон в беззвучном режиме.
+            // Активация сессии может блокировать поток, поэтому уводим её с main.
+            DispatchQueue.global(qos: .userInitiated).async {
+                try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+                try? AVAudioSession.sharedInstance().setActive(true)
+            }
         }
     }
 
@@ -279,16 +282,7 @@ struct TemplateFeedView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(
-                        LinearGradient(
-                            colors: [
-                                Color(red: 0.55, green: 0.25, blue: 1.0),
-                                Color(red: 1.0, green: 0.35, blue: 0.85)
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
+                    .background(FixFlyGradient.linear)
                     .clipShape(Capsule())
             }
             .padding(.horizontal, 20)
@@ -315,6 +309,7 @@ struct TemplateFeedView: View {
         guard let template = activeTemplate else { return }
 
         await MainActor.run {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             isUploading = true
             errorMessage = nil
         }

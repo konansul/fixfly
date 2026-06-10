@@ -103,14 +103,23 @@ struct CoinsWalletSheetView: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity)
-        .background(
+        .background(heroCardBackground)
+    }
+
+    /// Native Liquid Glass card on iOS 26+, translucent material below.
+    @ViewBuilder
+    private var heroCardBackground: some View {
+        if #available(iOS 26.0, *) {
+            Color.clear
+                .glassEffect(.regular, in: .rect(cornerRadius: 26))
+        } else {
             RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(Color.white.opacity(0.07))
+                .fill(.ultraThinMaterial)
                 .overlay(
                     RoundedRectangle(cornerRadius: 26, style: .continuous)
                         .stroke(Color.white.opacity(0.10), lineWidth: 1)
                 )
-        )
+        }
     }
 
     private var ledgerSection: some View {
