@@ -34,6 +34,7 @@ struct PhotoProcessingView: View {
     }
 
     var body: some View {
+        NavigationStack {
         ZStack {
             Color.clear.fixFlyBackground()
                 .ignoresSafeArea()
@@ -154,6 +155,10 @@ struct PhotoProcessingView: View {
                         .foregroundStyle(.white)
                 }
             }
+        }
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .navigationBarTitleDisplayMode(.inline)
         }
     }
 }
