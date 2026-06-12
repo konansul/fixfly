@@ -3,8 +3,8 @@ import StoreKit
 import Combine
 
 enum PaywallItemType: String, CaseIterable, Identifiable {
-    case weeklySub = "weekly_sub"
-    case monthlySub = "monthly_sub"
+    case weeklySub = "weekly_sub2"
+    case monthlySub = "monthly_sub2"
     case coins1200 = "coins_1200"
     case coins3000 = "coins_3000"
     case coins7200 = "coins_7200"
@@ -53,8 +53,17 @@ final class PaywallViewModel: ObservableObject {
     }
 
     func purchaseSelected() async -> Bool {
-        guard store.isReady else { return false }
-        
+        // Продукты могли не загрузиться при открытии (нет сети / конфигурация
+        // App Store Connect) — пробуем ещё раз и показываем ошибку вместо
+        // молчаливого выхода.
+        if !store.isReady {
+            await store.loadProductsIfNeeded()
+        }
+        guard store.isReady else {
+            errorText = store.loadError ?? StoreError.notAvailable.errorDescription
+            return false
+        }
+
         isPurchasing = true
         defer { isPurchasing = false }
 

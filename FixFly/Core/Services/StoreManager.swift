@@ -12,8 +12,10 @@ final class StoreManager: ObservableObject {
         observeTransactionUpdates()
     }
 
-    private let weeklyID = "weekly_sub"
-    private let monthlyID = "monthly_sub"
+    // weekly_sub/monthly_sub были удалены в App Store Connect, а Apple навсегда
+    // блокирует Product ID удалённых подписок — поэтому версии с суффиксом 2.
+    private let weeklyID = "weekly_sub2"
+    private let monthlyID = "monthly_sub2"
 
     private let coinIDs: [String] = [
         "coins_1200",
@@ -27,6 +29,7 @@ final class StoreManager: ObservableObject {
     @Published private(set) var monthly: Product?
     @Published private(set) var coinProducts: [String: Product] = [:]
     @Published private(set) var isReady: Bool = false
+    @Published private(set) var loadError: String?
 
     var weeklyDisplayPrice: String? { weekly?.displayPrice }
     var monthlyDisplayPrice: String? { monthly?.displayPrice }
@@ -55,8 +58,17 @@ final class StoreManager: ObservableObject {
             coinProducts = coins
 
             isReady = (weekly != nil) || (monthly != nil) || !coinProducts.isEmpty
+            // Запрос прошёл, но App Store не вернул ни одного продукта — почти
+            // всегда это конфигурация App Store Connect (продукты не созданы /
+            // Missing Metadata / договор Paid Applications не активен).
+            loadError = isReady ? nil : "Products not found in App Store. Check In-App Purchase setup in App Store Connect."
+            if !isReady {
+                print("StoreKit: no products returned for ids \(allIDs)")
+            }
         } catch {
             isReady = false
+            loadError = error.localizedDescription
+            print("StoreKit: product load failed: \(error)")
         }
     }
 

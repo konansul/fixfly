@@ -57,7 +57,7 @@ struct GenerationThumbnailView: View {
 
             if let urlString = item.outputUrl, let url = URL(string: urlString) {
                 if isVideo {
-                    LoopingCardVideoView(url: url)
+                    CachedVideoView(remoteURL: url)
                         .scaledToFill()
                         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
                         .clipped()

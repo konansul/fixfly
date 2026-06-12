@@ -27,6 +27,10 @@ struct TemplateFeedView: View {
     
     @State private var isMuted = false
 
+    // TikTok-style "clear mode": hold anywhere to hide the UI and watch the
+    // video clean; releasing the finger brings everything back.
+    @State private var isUIHidden = false
+
     init(templates: [RemoteCardItem], sectionId: String, currentIndex: Int) {
         self.templates = templates
         self.sectionId = sectionId
@@ -69,39 +73,36 @@ struct TemplateFeedView: View {
                 }
             }
             .ignoresSafeArea()
+            // Удержание пальца — прячем весь интерфейс (clear mode), отпустил — вернули.
+            .simultaneousGesture(
+                LongPressGesture(minimumDuration: 0.35)
+                    .sequenced(before: DragGesture(minimumDistance: 0))
+                    .onChanged { value in
+                        if case .second(true, nil) = value, !isUIHidden {
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            withAnimation(.easeInOut(duration: 0.2)) { isUIHidden = true }
+                        }
+                    }
+                    .onEnded { _ in
+                        withAnimation(.easeInOut(duration: 0.2)) { isUIHidden = false }
+                    }
+            )
 
             // Усиленное затемнение
             gradientOverlay
+                .opacity(isUIHidden ? 0 : 1)
 
             // Поверх контента выводим интерфейс управления
             VStack(spacing: 0) {
                 Spacer()
-                
-                // --- Кнопка управления звуком (только для видео) ---
-                HStack {
-                    Spacer()
-                    if activeTemplate?.actualResultType == .video {
-                        Button {
-                            withAnimation { isMuted.toggle() }
-                        } label: {
-                            Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                                .font(.system(size: 20))
-                                .foregroundColor(.white)
-                                .frame(width: 44, height: 44)
-                                .background(Color.black.opacity(0.4))
-                                .clipShape(Circle())
-                                .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
-                        }
-                        .padding(.trailing, 20)
-                        .padding(.bottom, 10) // Отступ над нижней панелью
-                    }
-                }
-                
+
                 // Нижняя панель
                 if let active = activeTemplate {
                     bottomSection(for: active)
                 }
             }
+            .opacity(isUIHidden ? 0 : 1)
+            .allowsHitTesting(!isUIHidden)
 
             if isUploading {
                 ZStack {
@@ -174,6 +175,7 @@ struct TemplateFeedView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar(isUIHidden ? .hidden : .visible, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -224,28 +226,45 @@ struct TemplateFeedView: View {
     private func bottomSection(for template: RemoteCardItem) -> some View {
         VStack(alignment: .center, spacing: 14) {
             
-            if let modelFaceUrl = template.modelUrl {
+            if template.modelUrl != nil || template.actualResultType == .video {
                 HStack(alignment: .bottom, spacing: 8) {
-                    AsyncImage(url: URL(string: modelFaceUrl)) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable().aspectRatio(contentMode: .fill)
-                        default:
-                            Color.gray.opacity(0.3)
+                    if let modelFaceUrl = template.modelUrl {
+                        AsyncImage(url: URL(string: modelFaceUrl)) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image.resizable().aspectRatio(contentMode: .fill)
+                            default:
+                                Color.gray.opacity(0.3)
+                            }
+                        }
+                        .frame(width: 90, height: 120)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.white.opacity(0.9), lineWidth: 2)
+                        )
+                        .shadow(color: .black.opacity(0.5), radius: 8, x: 0, y: 4)
+
+                        HandDrawnArrow()
+                            .offset(y: -30)
+                    }
+
+                    Spacer()
+
+                    // Кнопка звука — на одном уровне с карточкой-референсом.
+                    if template.actualResultType == .video {
+                        Button {
+                            withAnimation { isMuted.toggle() }
+                        } label: {
+                            Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(.white)
+                                .frame(width: 44, height: 44)
+                                .background(Color.black.opacity(0.4))
+                                .clipShape(Circle())
+                                .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
                         }
                     }
-                    .frame(width: 90, height: 120)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.white.opacity(0.9), lineWidth: 2)
-                    )
-                    .shadow(color: .black.opacity(0.5), radius: 8, x: 0, y: 4)
-                    
-                    HandDrawnArrow()
-                        .offset(y: -30)
-                    
-                    Spacer()
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 8)

@@ -106,30 +106,30 @@ struct HomeView: View {
         }
     }
 
+    /// Opens a TikTok-style feed of ALL hero templates (in banner order),
+    /// starting from the tapped one.
     private func handleHeroTap(_ item: HeroMediaItemDTO) {
         guard let targetId = item.action?.targetId else { return }
-        
-        var foundTemplate: RemoteCardItem?
-        var foundSectionId: String?
-        
-        if let sections = vm.home?.sections {
-            for section in sections {
-                let items = (section.items ?? []) + (section.tabs?.flatMap { $0.items } ?? [])
-                if let template = items.first(where: { $0.id == targetId }) {
-                    foundTemplate = template
-                    foundSectionId = section.id
-                    break
-                }
-            }
+
+        let allTemplates = (vm.home?.sections ?? []).flatMap { section in
+            (section.items ?? []) + (section.tabs?.flatMap { $0.items } ?? [])
         }
-        
-        if let template = foundTemplate, let sectionId = foundSectionId {
-            feedNavData = FeedNavigationData(
-                templates: [template],
-                sectionId: sectionId,
-                currentIndex: 0
-            )
+
+        var heroTemplates: [RemoteCardItem] = []
+        for heroItem in vm.home?.hero.items ?? [] {
+            guard let tid = heroItem.action?.targetId,
+                  let template = allTemplates.first(where: { $0.id == tid }),
+                  !heroTemplates.contains(where: { $0.id == tid }) else { continue }
+            heroTemplates.append(template)
         }
+
+        guard let index = heroTemplates.firstIndex(where: { $0.id == targetId }) else { return }
+
+        feedNavData = FeedNavigationData(
+            templates: heroTemplates,
+            sectionId: "hero",
+            currentIndex: index
+        )
     }
 
     @ViewBuilder
@@ -264,7 +264,7 @@ struct GridRemoteMediaCard: View {
             
             if let url = URL(string: item.mediaUrl) {
                 if item.mediaType == .video || item.mediaUrl.lowercased().hasSuffix(".mp4") {
-                    LoopingCardVideoView(url: url)
+                    CachedVideoView(remoteURL: url)
                         .scaledToFill()
                         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
                         .clipped()
