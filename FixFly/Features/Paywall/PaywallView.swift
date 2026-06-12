@@ -10,7 +10,7 @@ struct PaywallView: View {
 
     var body: some View {
         ZStack {
-            LocalLoopingVideoView(videoName: "paywall_bg", fileExtension: "mp4")
+            LocalLoopingVideoView(videoName: "paywall", fileExtension: "MP4")
                 .ignoresSafeArea()
 
             LinearGradient(
@@ -255,7 +255,7 @@ struct PaywallView: View {
                                 .foregroundStyle(.white.opacity(0.6))
                                 .strikethrough(true, color: .white.opacity(0.6))
                             
-                            Text("$16.99")
+                            Text("$14.99")
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundStyle(.white)
                         }

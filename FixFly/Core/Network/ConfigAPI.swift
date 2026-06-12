@@ -9,7 +9,7 @@ import Foundation
 
 enum ConfigAPI {
     
-    static let baseURL = "http://192.168.1.78:8000"
+    // static let baseURL = "http://192.168.1.78:8000"
     
-    // static let baseURL = "https://fixfly-app-backend.onrender.com"
+    static let baseURL = "https://fixfly-d9hmdbajfbgkfrh2.canadacentral-01.azurewebsites.net"
 }

@@ -8,7 +8,9 @@ struct HeroHeaderRemote: View {
     @State private var selectedIndex = 0
     @State private var dragX: CGFloat = 0
     
-    private let timer = Timer.publish(every: 3.0, on: .main, in: .common).autoconnect()
+    // Hero showcase videos are 8 s long — give each one time to play
+    // before auto-advancing.
+    private let timer = Timer.publish(every: 6.0, on: .main, in: .common).autoconnect()
 
     private let heroHeight: CGFloat = 300
 
@@ -18,16 +20,16 @@ struct HeroHeaderRemote: View {
 
             ZStack(alignment: .bottom) {
                 if !heroItems.isEmpty {
+                    // NB: tap handling lives on the container below, not on the
+                    // pages: .offset moves only rendering, the pages' hit areas
+                    // all overlap, so a per-page tap always hit the topmost one.
                     ZStack {
                         ForEach(Array(heroItems.enumerated()), id: \.element.id) { index, item in
                             HeroMediaPage(item: item)
                                 .frame(width: width, height: heroHeight)
                                 .clipped()
                                 .offset(x: xOffset(for: index, width: width))
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    onItemTap?(item)
-                                }
+                                .allowsHitTesting(false)
                         }
                     }
 
@@ -45,6 +47,10 @@ struct HeroHeaderRemote: View {
             }
             .frame(width: width, height: heroHeight)
             .contentShape(Rectangle())
+            .onTapGesture {
+                guard heroItems.indices.contains(selectedIndex) else { return }
+                onItemTap?(heroItems[selectedIndex])
+            }
             .highPriorityGesture(
                 DragGesture(minimumDistance: 10)
                     .onChanged { value in

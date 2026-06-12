@@ -76,7 +76,7 @@ struct RoundedRemoteMediaCard: View {
                     }
                 } else if let videoURL = URL(string: item.mediaUrl) {
                     ZStack {
-                        LoopingCardVideoView(url: videoURL)
+                        CachedVideoView(remoteURL: videoURL)
                     }
                 } else {
                     videoFallback

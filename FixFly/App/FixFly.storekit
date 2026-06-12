@@ -160,7 +160,7 @@
           "codeOffers" : [
 
           ],
-          "displayPrice" : "16.99",
+          "displayPrice" : "14.99",
           "familyShareable" : false,
           "groupNumber" : 1,
           "internalID" : "8FDB6E00",
@@ -174,9 +174,9 @@
               "locale" : "en_US"
             }
           ],
-          "productID" : "monthly_sub",
+          "productID" : "monthly_sub2",
           "recurringSubscriptionPeriod" : "P1M",
-          "referenceName" : "monthly_sub",
+          "referenceName" : "monthly_sub2",
           "subscriptionGroupID" : "2FFD35BE",
           "type" : "RecurringSubscription",
           "winbackOffers" : [
@@ -204,9 +204,9 @@
               "locale" : "en_US"
             }
           ],
-          "productID" : "weekly_sub",
+          "productID" : "weekly_sub2",
           "recurringSubscriptionPeriod" : "P1W",
-          "referenceName" : "weekly_sub",
+          "referenceName" : "weekly_sub2",
           "subscriptionGroupID" : "2FFD35BE",
           "type" : "RecurringSubscription",
           "winbackOffers" : [

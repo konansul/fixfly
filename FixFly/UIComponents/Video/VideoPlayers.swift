@@ -94,6 +94,32 @@ final class SafePlayerContainerView: UIView {
         super.init(frame: frame)
         isUserInteractionEnabled = false
         backgroundColor = .clear
+        // При уходе в фон система ставит плееры на паузу (а после долгого фона
+        // отбирает декодеры, переводя item в .failed) — сами они не оживают.
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appDidBecomeActive),
+            name: UIApplication.didBecomeActiveNotification,
+            object: nil
+        )
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    @objc private func appDidBecomeActive() {
+        guard isActiveState, let player = queuePlayer else { return }
+        if player.status == .failed || player.currentItem?.status == .failed {
+            // Декодер отобрали — плеер уже не реанимировать, пересоздаём.
+            if let url = currentURL {
+                let muted = player.isMuted
+                currentURL = nil
+                setupPlayer(url: url, isMuted: muted)
+            }
+        } else if player.timeControlStatus != .playing {
+            player.play()
+        }
     }
 
     required init?(coder: NSCoder) {

@@ -34,8 +34,17 @@ class PhotoProcessingViewModel: ObservableObject {
     @Published var outputUrl: String?
     @Published var errorText: String?
     
-    private let pollInterval = 3.0
     private var startTime: Date?
+
+    /// Generations almost never finish before ~10 s, so the first status
+    /// check waits that long; after that we poll every 5 s. For a typical
+    /// 30 s generation that's ~5 requests total. The progress ring animates
+    /// on its own timer (see startPollingStatus), so the rare polls don't
+    /// make the UI feel less alive.
+    private let initialPollDelay: TimeInterval = 10
+    private let pollInterval: TimeInterval = 5
+    /// The ring fills up over this many seconds (capped at 95% until done).
+    private let expectedDuration: TimeInterval = 40
 
     init(taskId: String) {
         self.taskId = taskId
@@ -45,7 +54,21 @@ class PhotoProcessingViewModel: ObservableObject {
     
     func startPollingStatus() async {
         guard !taskId.isEmpty else { return }
-        
+
+        // Smooth, purely local progress animation — no network involved.
+        let progressTask = Task {
+            remainingTimeEstimate = "Processing..."
+            while !isProcessingComplete && !hasError && !Task.isCancelled {
+                let elapsed = Date().timeIntervalSince(startTime ?? Date())
+                progressAmount = min(0.95, elapsed / expectedDuration)
+                try? await Task.sleep(nanoseconds: 500_000_000)
+            }
+        }
+        defer { progressTask.cancel() }
+
+        // No generation finishes that fast — don't even ask the backend yet.
+        try? await Task.sleep(nanoseconds: UInt64(initialPollDelay * 1_000_000_000))
+
         while !isProcessingComplete && !hasError {
             do {
                 guard let url = URL(string: ConfigAPI.baseURL + "/v1/generations/status/\(taskId)") else { return }
@@ -53,12 +76,12 @@ class PhotoProcessingViewModel: ObservableObject {
                 if let token = TokenStore.shared.accessToken {
                     request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
                 }
-                
+
                 let (data, response) = try await URLSession.shared.data(for: request)
-                
+
                 if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
                     let statusResponse = try JSONDecoder().decode(TaskStatusResponse.self, from: data)
-                    
+
                     if statusResponse.status == "done" {
                         outputUrl = statusResponse.output_url
                         progressAmount = 1.0
@@ -70,24 +93,15 @@ class PhotoProcessingViewModel: ObservableObject {
                         remainingTimeEstimate = "Failed"
                         hasError = true
                         break
+                    } else if statusResponse.status == "queued" {
+                        remainingTimeEstimate = "In queue..."
                     } else {
-                        if let exactProgress = statusResponse.progress {
-                            progressAmount = exactProgress
-                        } else {
-                            let elapsedTime = Date().timeIntervalSince(startTime ?? Date())
-                            progressAmount = min(0.95, elapsedTime / 180.0)
-                        }
-                        
-                        if statusResponse.status == "queued" {
-                            remainingTimeEstimate = "In queue..."
-                        } else {
-                            remainingTimeEstimate = "Processing..."
-                        }
+                        remainingTimeEstimate = "Processing..."
                     }
                 }
             } catch {
             }
-            
+
             try? await Task.sleep(nanoseconds: UInt64(pollInterval * 1_000_000_000))
         }
     }

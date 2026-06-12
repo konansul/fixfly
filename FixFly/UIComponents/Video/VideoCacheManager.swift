@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import CryptoKit
 
 class VideoCacheManager {
     static let shared = VideoCacheManager()
@@ -25,7 +26,11 @@ class VideoCacheManager {
     }
 
     func getCachedURL(for url: URL) async -> URL {
-        let fileName = url.lastPathComponent
+        // Key on a hash of the FULL url: generation outputs are all named
+        // "output.mp4", so lastPathComponent alone would collide.
+        let digest = SHA256.hash(data: Data(url.absoluteString.utf8))
+        let hash = digest.map { String(format: "%02x", $0) }.joined().prefix(32)
+        let fileName = "\(hash).\(url.pathExtension.isEmpty ? "mp4" : url.pathExtension)"
         let localURL = cacheDirectory.appendingPathComponent(fileName)
 
         // 1. Если файл уже есть на диске, моментально отдаем его
