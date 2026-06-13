@@ -29,7 +29,8 @@ struct AppLoadingView: View {
     
     private var loadingScreen: some View {
         ZStack {
-            Color.clear.fixFlyBackground()
+            // Uniform dark navy matching the app icon background (was flat black).
+            Color(red: 0.02, green: 0.04, blue: 0.09)
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
 
@@ -43,7 +44,7 @@ struct AppLoadingView: View {
                     Image("fixfly_logo")
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 86, height: 86)
+                        .frame(width: 200, height: 200)
                         .scaleEffect(logoScale)
                         .opacity(logoOpacity)
                 }

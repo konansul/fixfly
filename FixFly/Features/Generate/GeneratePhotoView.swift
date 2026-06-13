@@ -154,7 +154,7 @@ struct GeneratePhotoFormView: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: 20, style: .continuous)
                             .stroke(
-                                isPromptFocused ? Color(red: 0.55, green: 0.25, blue: 1.0) : Color.white.opacity(0.1),
+                                isPromptFocused ? FixFlyGradient.accent : Color.white.opacity(0.1),
                                 lineWidth: 1
                             )
                     )
@@ -205,7 +205,7 @@ struct GeneratePhotoFormView: View {
                             .padding(.vertical, 10)
                             .background(
                                 Capsule()
-                                    .fill(isSelected ? Color(red: 0.55, green: 0.25, blue: 1.0) : Color.white.opacity(0.08))
+                                    .fill(isSelected ? FixFlyGradient.accent : Color.white.opacity(0.08))
                             )
                         }
                         .buttonStyle(.plain)
@@ -248,7 +248,7 @@ struct GeneratePhotoFormView: View {
                     } label: {
                         Text("Edit")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(Color(red: 0.55, green: 0.25, blue: 1.0))
+                            .foregroundStyle(FixFlyGradient.accent)
                     }
                 }
             }
@@ -333,7 +333,7 @@ struct GeneratePhotoFormView: View {
                                 .padding(.vertical, 10)
                                 .background(
                                     Capsule()
-                                        .fill(selectedStyle == style ? Color(red: 0.55, green: 0.25, blue: 1.0) : Color.white.opacity(0.08))
+                                        .fill(selectedStyle == style ? FixFlyGradient.accent : Color.white.opacity(0.08))
                                 )
                         }
                         .buttonStyle(.plain)

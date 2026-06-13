@@ -35,14 +35,15 @@ struct FixFlyBackground: View {
 
 private struct GlowBlobsBackground: View {
 
-    /// The "black" of the app: muted near-black, never true `(0,0,0)`.
-    private static let baseColor = Color(red: 0.008, green: 0.008, blue: 0.012)
+    /// The "black" of the app: a very dark navy (matches the app icon's
+    /// background), never true `(0,0,0)`.
+    private static let baseColor = Color(red: 0.02, green: 0.04, blue: 0.09)
 
-    /// Anchor hues the blobs cycle through: blue → pink → purple → (loops).
+    /// Anchor hues the blobs cycle through: turquoise → sky → blue → (loops).
     private static let hueCycle: [SIMD3<Double>] = [
-        SIMD3(0.15, 0.35, 0.98),   // blue
-        SIMD3(0.98, 0.20, 0.68),   // pink / magenta
-        SIMD3(0.58, 0.18, 0.98),   // purple
+        SIMD3(0.22, 0.86, 0.97),   // turquoise / cyan
+        SIMD3(0.26, 0.64, 0.99),   // sky blue
+        SIMD3(0.13, 0.45, 0.97),   // deep blue
     ]
 
     /// One breath (fade out → re-ignite) per blob.
