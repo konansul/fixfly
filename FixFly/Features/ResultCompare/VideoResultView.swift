@@ -171,14 +171,7 @@ struct VideoResultView: View {
     }
 
     private var accentGradient: LinearGradient {
-        LinearGradient(
-            colors: [
-                Color(red: 0.44, green: 0.28, blue: 1.00),
-                Color(red: 0.94, green: 0.33, blue: 0.87),
-                Color(red: 0.26, green: 0.67, blue: 1.00)
-            ],
-            startPoint: .leading, endPoint: .trailing
-        )
+        FixFlyGradient.linear
     }
 
     private var actionButtons: some View {

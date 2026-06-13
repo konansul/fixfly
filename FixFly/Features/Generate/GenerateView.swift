@@ -10,7 +10,7 @@ struct GenerateView: View {
             title: "AI Photo",
             subtitle: "Generate images from text or photo",
             iconName: "photo.stack.fill",
-            gradientColors: [Color(red: 0.44, green: 0.28, blue: 1.00), Color(red: 0.26, green: 0.67, blue: 1.00)]
+            gradientColors: [FixFlyGradient.blue, FixFlyGradient.purple]
         ),
         
         GenerationOption(
@@ -18,7 +18,7 @@ struct GenerateView: View {
             title: "AI Video",
             subtitle: "Create cinematic videos from your prompts",
             iconName: "video.fill",
-            gradientColors: [Color(red: 0.94, green: 0.33, blue: 0.87), Color(red: 1.0, green: 0.35, blue: 0.85)]
+            gradientColors: [FixFlyGradient.purple, FixFlyGradient.pink]
         )
 //        GenerationOption(
 //            type: .music,

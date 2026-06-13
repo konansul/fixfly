@@ -24,9 +24,9 @@ struct FixFlyLoadingOverlay: View {
                     .stroke(
                         AngularGradient(
                             gradient: Gradient(colors: [
-                                Color(red: 0.55, green: 0.25, blue: 1.0),
-                                Color(red: 1.0, green: 0.35, blue: 0.85),
-                                Color(red: 0.55, green: 0.25, blue: 1.0)
+                                FixFlyGradient.blue,
+                                FixFlyGradient.pink,
+                                FixFlyGradient.blue
                             ]),
                             center: .center
                         ),

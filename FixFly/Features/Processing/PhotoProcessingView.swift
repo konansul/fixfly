@@ -19,14 +19,7 @@ struct PhotoProcessingView: View {
     @State private var pulseState = false
     @State private var rotationState = 0.0
     
-    private let fixFlyGradient = LinearGradient(
-        colors: [
-            Color(red: 0.55, green: 0.25, blue: 1.0),
-            Color(red: 1.0, green: 0.35, blue: 0.85)
-        ],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
+    private let fixFlyGradient = FixFlyGradient.linear
 
     init(taskId: String, onComplete: ((String) -> Void)? = nil) {
         _vm = StateObject(wrappedValue: PhotoProcessingViewModel(taskId: taskId))
@@ -198,7 +191,7 @@ private struct CircularProgressRing: View {
                 .frame(width: 200, height: 200)
                 .rotationEffect(.degrees(-90))
                 .animation(.spring(response: 0.6, dampingFraction: 0.8), value: progress)
-                .shadow(color: Color(red: 0.55, green: 0.25, blue: 1.0).opacity(0.6), radius: 10, x: 0, y: 0)
+                .shadow(color: FixFlyGradient.accent.opacity(0.6), radius: 10, x: 0, y: 0)
 
             // Текст внутри
             VStack(spacing: 8) {
