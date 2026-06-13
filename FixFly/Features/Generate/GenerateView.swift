@@ -8,7 +8,7 @@ struct GenerateView: View {
         GenerationOption(
             type: .image,
             title: "AI Photo",
-            subtitle: "Generate images from text or reference photo",
+            subtitle: "Generate images from text or photo",
             iconName: "photo.stack.fill",
             gradientColors: [Color(red: 0.44, green: 0.28, blue: 1.00), Color(red: 0.26, green: 0.67, blue: 1.00)]
         ),
@@ -52,7 +52,7 @@ struct GenerateView: View {
                                 
                                 Text("What do you want to create today?")
                                     .font(.system(size: 15, weight: .medium))
-                                    .foregroundStyle(.white.opacity(0.7))
+                                    .foregroundStyle(.white.opacity(0.75))
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(.horizontal, 16)
                             }

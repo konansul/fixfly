@@ -71,8 +71,7 @@ struct CachedVideoView: View {
             if let localURL = localURL {
                 LoopingCardVideoView(url: localURL, isMuted: isMuted)
             } else {
-                Color.white.opacity(0.05)
-                ProgressView().tint(.white)
+                Color.clear
             }
         }
         .task {

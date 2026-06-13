@@ -30,10 +30,7 @@ struct SourceImageView: View {
                     switch phase {
 
                     case .empty:
-                        ZStack {
-                            Color.white.opacity(0.05)
-                            ProgressView().tint(.white)
-                        }
+                        MediaLoadingPlaceholder()
 
                     case .success(let image):
                         image

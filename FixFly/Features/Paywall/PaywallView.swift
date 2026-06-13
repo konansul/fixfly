@@ -29,7 +29,7 @@ struct PaywallView: View {
             VStack(spacing: 0) {
                 topBar
                     .padding(.horizontal, 18)
-                    .padding(.top, 15)
+                    .padding(.top, 25)
 
                 Spacer()
 
@@ -105,18 +105,7 @@ struct PaywallView: View {
             modeSwitcher
                 .padding(.top, 4)
 
-            benefitsSection
-
-            ZStack {
-                if vm.selectedProductId.contains("sub") {
-                    subscriptionSection
-                        .transition(.asymmetric(insertion: .move(edge: .leading).combined(with: .opacity), removal: .move(edge: .trailing).combined(with: .opacity)))
-                } else {
-                    coinSection
-                        .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .move(edge: .leading).combined(with: .opacity)))
-                }
-            }
-            .animation(.easeInOut(duration: 0.25), value: vm.selectedProductId.contains("sub"))
+            planArea
 
             Button {
                 Task {
@@ -129,17 +118,17 @@ struct PaywallView: View {
             } label: {
                 ZStack {
                     if vm.isPurchasing {
-                        ProgressView().tint(.white)
+                        ProgressView().tint(.black)
                     } else {
                         Text(buttonTitle)
                             .font(.system(size: 18, weight: .bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.black)
                     }
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: 58)
-                .background(FixFlyGradient.linear)
-                .clipShape(Capsule())
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                 .opacity(isCurrentPlanSelected ? 0.45 : 1.0)
             }
             .buttonStyle(.plain)
@@ -158,6 +147,25 @@ struct PaywallView: View {
         guard vm.selectedProductId != productId else { return }
         UISelectionFeedbackGenerator().selectionChanged()
         vm.selectedProductId = productId
+    }
+
+    /// Цена подписки из StoreKit (локализованная) + зачёркнутый «старый» якорь.
+    /// Пока продукты грузятся — показываем сдержанный плейсхолдер.
+    private func priceLabel(for productId: String) -> AnyView {
+        AnyView(
+            HStack(spacing: 4) {
+                if let strike = vm.strikePrices[productId] {
+                    Text(strike)
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundStyle(.white.opacity(0.6))
+                        .strikethrough(true, color: .white.opacity(0.6))
+                }
+
+                Text(vm.displayPrices[productId] ?? "—")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+        )
     }
 
     private var buttonTitle: String {
@@ -186,14 +194,69 @@ struct PaywallView: View {
         )
     }
 
-    private var benefitsSection: some View {
+    private var isSubscriptionMode: Bool { vm.selectedProductId.contains("sub") }
+
+    /// Зона «бенефиты + список планов». Невидимый призрак из обоих режимов
+    /// фиксирует высоту по самому высокому варианту, а реальный контент
+    /// прижимается к низу (к кнопке Subscribe) — свободное место копится
+    /// сверху, под переключателем Subscription/Coins.
+    private var planArea: some View {
+        ZStack {
+            variableStack(forSubscription: true)
+            variableStack(forSubscription: false)
+        }
+        .hidden()
+        .overlay {
+            // Натуральная высота группы, прижатая к низу зоны; слабина сверху.
+            VStack(alignment: .leading, spacing: 16) {
+                currentBenefits
+                currentSection
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+        }
+        .animation(.easeInOut(duration: 0.25), value: isSubscriptionMode)
+    }
+
+    /// Натуральная высота режима — используется только призраком для измерения.
+    @ViewBuilder
+    private func variableStack(forSubscription sub: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            benefitsContent(forSubscription: sub, weekly: true)
+                .padding(.horizontal, 4)
+            if sub { subscriptionSection } else { coinSection }
+        }
+    }
+
+    private var currentBenefits: some View {
+        benefitsContent(
+            forSubscription: isSubscriptionMode,
+            weekly: vm.selectedProductId == PaywallItemType.weeklySub.rawValue
+        )
+        .padding(.horizontal, 4)
+        .animation(.easeInOut(duration: 0.2), value: vm.selectedProductId)
+    }
+
+    private var currentSection: some View {
+        ZStack {
+            if isSubscriptionMode {
+                subscriptionSection
+                    .transition(.asymmetric(insertion: .move(edge: .leading).combined(with: .opacity), removal: .move(edge: .trailing).combined(with: .opacity)))
+            } else {
+                coinSection
+                    .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .move(edge: .leading).combined(with: .opacity)))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func benefitsContent(forSubscription: Bool, weekly: Bool) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            if vm.selectedProductId.contains("sub") {
+            if forSubscription {
                 benefitRow(icon: "✨", text: "Priority generation speed")
                 benefitRow(icon: "💧", text: "No watermarks")
                 benefitRow(icon: "💎", text: "Unlock all Premium templates")
-                
-                if vm.selectedProductId == PaywallItemType.weeklySub.rawValue {
+
+                if weekly {
                     benefitRow(icon: "🎁", text: "2,400 Coins included every week")
                 } else {
                     benefitRow(icon: "🎁", text: "7,200 Coins included every month")
@@ -202,9 +265,6 @@ struct PaywallView: View {
                 benefitRow(icon: "🪙", text: "One-time coin pack. Premium features not included.")
             }
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 4)
-        .animation(.easeInOut(duration: 0.2), value: vm.selectedProductId)
     }
 
     private func benefitRow(icon: String, text: String) -> some View {
@@ -224,19 +284,7 @@ struct PaywallView: View {
                     subtitle: "2,400 Coins",
                     badge: vm.activeSubscriptionId == PaywallItemType.weeklySub.rawValue ? "Current Plan" : "Popular",
                     rightTop: "per week",
-                    // Оборачиваем HStack в AnyView
-                    rightBottom: AnyView(
-                        HStack(spacing: 4) {
-                            Text("$10.00")
-                                .font(.system(size: 14, weight: .regular))
-                                .foregroundStyle(.white.opacity(0.6))
-                                .strikethrough(true, color: .white.opacity(0.6))
-                            
-                            Text("$6.99")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(.white)
-                        }
-                    ),
+                    rightBottom: priceLabel(for: PaywallItemType.weeklySub.rawValue),
                     isSelected: vm.selectedProductId == PaywallItemType.weeklySub.rawValue
                 ) {
                     select(PaywallItemType.weeklySub.rawValue)
@@ -247,19 +295,7 @@ struct PaywallView: View {
                     subtitle: "7,200 Coins",
                     badge: vm.activeSubscriptionId == PaywallItemType.monthlySub.rawValue ? "Current Plan" : "Best Value",
                     rightTop: "per month",
-                    // Оборачиваем HStack в AnyView
-                    rightBottom: AnyView(
-                        HStack(spacing: 4) {
-                            Text("$25.00")
-                                .font(.system(size: 14, weight: .regular))
-                                .foregroundStyle(.white.opacity(0.6))
-                                .strikethrough(true, color: .white.opacity(0.6))
-                            
-                            Text("$14.99")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(.white)
-                        }
-                    ),
+                    rightBottom: priceLabel(for: PaywallItemType.monthlySub.rawValue),
                     isSelected: vm.selectedProductId == PaywallItemType.monthlySub.rawValue
                 ) {
                     select(PaywallItemType.monthlySub.rawValue)
@@ -274,7 +310,7 @@ struct PaywallView: View {
                 title: "Starter Pack",
                 subtitle: "1,200 Coins",
                 badge: nil,
-                rightBottom: "$4.99",
+                rightBottom: vm.displayPrices[PaywallItemType.coins1200.rawValue] ?? "—",
                 isSelected: vm.selectedProductId == PaywallItemType.coins1200.rawValue
             ) {
                 select(PaywallItemType.coins1200.rawValue)
@@ -284,7 +320,7 @@ struct PaywallView: View {
                 title: "Pro Pack",
                 subtitle: "3,000 Coins",
                 badge: "Best Seller",
-                rightBottom: "$9.99",
+                rightBottom: vm.displayPrices[PaywallItemType.coins3000.rawValue] ?? "—",
                 isSelected: vm.selectedProductId == PaywallItemType.coins3000.rawValue
             ) {
                 select(PaywallItemType.coins3000.rawValue)
@@ -294,7 +330,7 @@ struct PaywallView: View {
                 title: "Elite Pack",
                 subtitle: "7,200 Coins",
                 badge: "Save More",
-                rightBottom: "$19.99",
+                rightBottom: vm.displayPrices[PaywallItemType.coins7200.rawValue] ?? "—",
                 isSelected: vm.selectedProductId == PaywallItemType.coins7200.rawValue
             ) {
                 select(PaywallItemType.coins7200.rawValue)

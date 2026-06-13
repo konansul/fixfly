@@ -23,7 +23,7 @@ struct GenerateVideoFormView: View {
     
     @State private var showRealPhotoPicker = false
     
-    let styles = ["None", "Cinematic", "Anime", "Cyberpunk", "3D Render", "Digital Art"]
+    let styles = ["None", "Cinematic", "Anime", "Cyberpunk", "3D Render", "Digital Art", "Oil Painting", "Watercolor", "Pixel Art", "Fantasy", "Photorealistic", "Vintage", "Comic", "Pop Art", "Neon", "Sketch"]
     let aspectRatios = ["9:16", "16:9"]
     
     var body: some View {
@@ -180,18 +180,22 @@ struct GenerateVideoFormView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     ForEach(aspectRatios, id: \.self) { ratio in
+                        let isSelected = selectedAspectRatio == ratio
                         Button {
                             selectedAspectRatio = ratio
                         } label: {
-                            Text(ratio)
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(selectedAspectRatio == ratio ? .white : .white.opacity(0.7))
-                                .padding(.horizontal, 18)
-                                .padding(.vertical, 10)
-                                .background(
-                                    Capsule()
-                                        .fill(selectedAspectRatio == ratio ? Color(red: 0.55, green: 0.25, blue: 1.0) : Color.white.opacity(0.08))
-                                )
+                            HStack(spacing: 7) {
+                                aspectRatioIcon(for: ratio, isSelected: isSelected)
+                                Text(ratio)
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(isSelected ? .white : .white.opacity(0.7))
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(
+                                Capsule()
+                                    .fill(isSelected ? Color(red: 0.55, green: 0.25, blue: 1.0) : Color.white.opacity(0.08))
+                            )
                         }
                         .buttonStyle(.plain)
                     }
@@ -201,6 +205,22 @@ struct GenerateVideoFormView: View {
         }
     }
     
+    /// Маленький контур-прямоугольник в пропорциях соотношения (9:16 —
+    /// вертикальный, 16:9 — горизонтальный). Размеры считаются из чисел "w:h".
+    /// Контейнер 18×18 держит капсулы выровненными по высоте.
+    private func aspectRatioIcon(for ratio: String, isSelected: Bool) -> some View {
+        let comps = ratio.split(separator: ":").compactMap { Double($0) }
+        let aw = comps.count == 2 ? comps[0] : 1
+        let ah = comps.count == 2 ? comps[1] : 1
+        let maxSide: CGFloat = 16
+        let scale = maxSide / CGFloat(max(aw, ah))
+
+        return Rectangle()
+            .stroke(isSelected ? Color.white : Color.white.opacity(0.7), lineWidth: 1.8)
+            .frame(width: CGFloat(aw) * scale, height: CGFloat(ah) * scale)
+            .frame(width: 18, height: 18)
+    }
+
     private var multiplePhotoSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {

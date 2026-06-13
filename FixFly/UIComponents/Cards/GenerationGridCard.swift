@@ -53,7 +53,7 @@ struct GenerationThumbnailView: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.white.opacity(0.05))
+                .fill(Color.clear)
 
             if let urlString = item.outputUrl, let url = URL(string: urlString) {
                 if isVideo {
@@ -74,7 +74,7 @@ struct GenerationThumbnailView: View {
                     AsyncImage(url: url) { phase in
                         switch phase {
                         case .empty:
-                            ProgressView().tint(.white)
+                            MediaLoadingPlaceholder()
                         case .success(let image):
                             image
                                 .resizable()

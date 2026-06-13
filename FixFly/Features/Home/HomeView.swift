@@ -159,14 +159,27 @@ struct HomeView: View {
                 Button {
                     selectedGridData = SectionGridData(sectionId: section.id, title: section.title, items: itemsForGrid)
                 } label: {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 32, height: 32)
-                        .background(Color.white.opacity(0.1))
-                        .clipShape(Circle())
+                    sectionArrowLabel
                 }
             }
+        }
+    }
+
+    /// Кнопка-стрелка в нативном Liquid Glass (iOS 26+); на старых системах —
+    /// прежний полупрозрачный кружок.
+    @ViewBuilder
+    private var sectionArrowLabel: some View {
+        let base = Image(systemName: "chevron.right")
+            .font(.system(size: 14, weight: .bold))
+            .foregroundStyle(.white)
+            .frame(width: 32, height: 32)
+
+        if #available(iOS 26.0, *) {
+            base.glassEffect(.regular, in: Circle())
+        } else {
+            base
+                .background(Color.white.opacity(0.1))
+                .clipShape(Circle())
         }
     }
 
@@ -260,8 +273,8 @@ struct GridRemoteMediaCard: View {
     
     var body: some View {
         ZStack {
-            Color.white.opacity(0.05)
-            
+            Color.clear
+
             if let url = URL(string: item.mediaUrl) {
                 if item.mediaType == .video || item.mediaUrl.lowercased().hasSuffix(".mp4") {
                     CachedVideoView(remoteURL: url)
@@ -273,7 +286,7 @@ struct GridRemoteMediaCard: View {
                         if let image = phase.image {
                             image.resizable().scaledToFill()
                         } else {
-                            Color.white.opacity(0.1)
+                            MediaLoadingPlaceholder()
                         }
                     }
                     .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)

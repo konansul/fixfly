@@ -17,6 +17,17 @@ struct ProButton: View {
         .foregroundStyle(.white)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Capsule().fill(FixFlyGradient.linear))
+        .background(
+            Capsule().fill(
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.55, green: 0.25, blue: 1.0),
+                        Color(red: 1.0, green: 0.35, blue: 0.85)
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+        )
     }
 }

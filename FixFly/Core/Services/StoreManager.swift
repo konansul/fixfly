@@ -35,9 +35,13 @@ final class StoreManager: ObservableObject {
     var monthlyDisplayPrice: String? { monthly?.displayPrice }
 
     func displayPrice(for productId: String) -> String? {
-        if productId == weeklyID { return weekly?.displayPrice }
-        if productId == monthlyID { return monthly?.displayPrice }
-        return coinProducts[productId]?.displayPrice
+        product(for: productId)?.displayPrice
+    }
+
+    func product(for productId: String) -> Product? {
+        if productId == weeklyID { return weekly }
+        if productId == monthlyID { return monthly }
+        return coinProducts[productId]
     }
 
     func loadProductsIfNeeded() async {

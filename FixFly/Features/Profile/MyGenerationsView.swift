@@ -60,7 +60,6 @@ struct MyGenerationsView: View {
                                         .transition(.scale.combined(with: .opacity))
                                     }
                                 }
-                                .id(vm.refreshId)
                                 .padding(.horizontal, 16)
                                 .padding(.bottom, 24)
                             }
