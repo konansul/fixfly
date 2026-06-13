@@ -8,6 +8,17 @@
 import SwiftUI
 import AVKit
 
+/// Единый плейсхолдер загрузки медиа: полностью прозрачный, без спиннера.
+/// Сквозь него виден фон приложения; реальный контент (фото или видео)
+/// появляется сам, как только подгрузится. Прозрачность выбрана намеренно,
+/// чтобы фото и видео в момент загрузки выглядели одинаково и не мелькали
+/// серыми/чёрными прямоугольниками.
+struct MediaLoadingPlaceholder: View {
+    var body: some View {
+        Color.clear
+    }
+}
+
 struct HorizontalRemoteCards: View {
     let items: [RemoteCardItem]
     let onTap: (RemoteCardItem) -> Void
@@ -51,7 +62,7 @@ struct RoundedRemoteMediaCard: View {
                                 .resizable()
                                 .scaledToFill()
                         default:
-                            fallback
+                            MediaLoadingPlaceholder()
                         }
                     }
                 } else {
@@ -71,7 +82,7 @@ struct RoundedRemoteMediaCard: View {
 
                             }
                         default:
-                            videoFallback
+                            MediaLoadingPlaceholder()
                         }
                     }
                 } else if let videoURL = URL(string: item.mediaUrl) {

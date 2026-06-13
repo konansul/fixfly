@@ -193,6 +193,25 @@ struct TemplateFeedView: View {
                 try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
                 try? AVAudioSession.sharedInstance().setActive(true)
             }
+
+            prefetchModelImages()
+        }
+    }
+
+    /// Заранее скачивает фото моделей (`modelUrl`) всех темплейтов в общий
+    /// URLCache. Фото показывается только для активного темплейта, поэтому без
+    /// префетча оно грузится лишь после долистывания. `AsyncImage` использует
+    /// `URLSession.shared`/`URLCache.shared`, так что прогретый кэш отдаётся
+    /// этим же `AsyncImage` моментально — фото уже на месте к моменту свайпа.
+    private func prefetchModelImages() {
+        let urls = templates
+            .compactMap { $0.modelUrl }
+            .compactMap { URL(string: $0) }
+
+        for url in urls {
+            let request = URLRequest(url: url)
+            guard URLCache.shared.cachedResponse(for: request) == nil else { continue }
+            URLSession.shared.dataTask(with: request) { _, _, _ in }.resume()
         }
     }
 
@@ -234,7 +253,7 @@ struct TemplateFeedView: View {
                             case .success(let image):
                                 image.resizable().aspectRatio(contentMode: .fill)
                             default:
-                                Color.gray.opacity(0.3)
+                                Color.clear
                             }
                         }
                         .frame(width: 90, height: 120)
@@ -410,8 +429,7 @@ private struct TemplateFullScreenPage: View {
                                     .foregroundColor(.gray)
                             }
                         default:
-                            ProgressView()
-                                .tint(.white)
+                            Color.clear
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)

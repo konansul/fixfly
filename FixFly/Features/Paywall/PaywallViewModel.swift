@@ -22,7 +22,13 @@ final class PaywallViewModel: ObservableObject {
     @Published var isPurchasing = false
     @Published var errorText: String?
     @Published var activeSubscriptionId: String?
-    
+
+    /// Локализованные цены прямо из StoreKit (валюта/формат витрины пользователя).
+    /// Пусто, пока продукты не загрузились — UI показывает плейсхолдер.
+    @Published var displayPrices: [String: String] = [:]
+    /// Зачёркнутая «старая» цена для подписок (маркетинговый якорь), в той же валюте.
+    @Published var strikePrices: [String: String] = [:]
+
     private let store = StoreManager.shared
 
     var primaryButtonTitle: String {
@@ -40,7 +46,28 @@ final class PaywallViewModel: ObservableObject {
 
     func loadProducts() async {
         await store.loadProductsIfNeeded()
+        refreshPrices()
         await checkActiveSubscription()
+    }
+
+    /// Перечитывает локализованные цены из загруженных StoreKit-продуктов.
+    private func refreshPrices() {
+        var prices: [String: String] = [:]
+        var strikes: [String: String] = [:]
+
+        for type in PaywallItemType.allCases {
+            guard let product = store.product(for: type.rawValue) else { continue }
+            prices[type.rawValue] = product.displayPrice
+
+            // Зачёркнутая «была» цена ~1.5x от реальной, в той же валюте/формате.
+            if type.isSubscription {
+                let original = product.price * 1.5
+                strikes[type.rawValue] = original.formatted(product.priceFormatStyle)
+            }
+        }
+
+        displayPrices = prices
+        strikePrices = strikes
     }
 
     func restore() async {
