@@ -1,8 +1,10 @@
 import SwiftUI
+import AuthenticationServices
 
 struct MyGenerationsView: View {
     @StateObject private var vm = MyGenerationsViewModel()
     @ObservedObject private var router = DeepLinkRouter.shared
+    @ObservedObject private var auth = AuthStore.shared
     @State private var selectedItemForCompare: GenerationItemDTO?
     @State private var showSettings = false
     @State private var showCoinsSheet = false
@@ -34,7 +36,11 @@ struct MyGenerationsView: View {
                         } else {
                             ScrollView(showsIndicators: false) {
                                 titleSection
-                                
+
+                                profileSection
+                                    .padding(.horizontal, 16)
+                                    .padding(.bottom, 18)
+
                                 LazyVGrid(columns: columns, spacing: 14) {
                                     ForEach(successfulItems) { item in
                                         Button {
@@ -157,6 +163,92 @@ struct MyGenerationsView: View {
         router.pendingGenerationTaskId = nil
     }
     
+    @ViewBuilder
+    private var profileSection: some View {
+        if let email = auth.user?.email, !email.isEmpty {
+            // Signed in with Apple — show the linked account.
+            HStack(spacing: 12) {
+                profileAvatar
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(auth.user?.fullName?.isEmpty == false ? auth.user!.fullName! : "Your Account")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.white)
+                    Text(email)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.white.opacity(0.6))
+                        .lineLimit(1)
+                }
+                Spacer()
+                Image(systemName: "checkmark.seal.fill")
+                    .foregroundStyle(FixFlyGradient.accent)
+            }
+            .padding(14)
+            .background(Color.white.opacity(0.05))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        } else {
+            // Anonymous — offer Sign in with Apple to save the account.
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Save your account")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+                Text("Sign in to keep your coins and creations across devices.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.white.opacity(0.6))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                SignInWithAppleButton(.signIn) { request in
+                    request.requestedScopes = [.fullName, .email]
+                } onCompletion: { result in
+                    handleAppleSignIn(result)
+                }
+                .signInWithAppleButtonStyle(.white)
+                .frame(height: 48)
+                .clipShape(Capsule())
+                .disabled(auth.isLoading)
+            }
+            .padding(14)
+            .background(Color.white.opacity(0.05))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+    }
+
+    private var profileAvatar: some View {
+        Group {
+            if let urlStr = auth.user?.avatarUrl, let url = URL(string: urlStr) {
+                AsyncImage(url: url) { img in
+                    img.resizable().scaledToFill()
+                } placeholder: {
+                    Color.white.opacity(0.1)
+                }
+            } else {
+                Image(systemName: "person.crop.circle.fill")
+                    .resizable()
+                    .foregroundStyle(.white.opacity(0.5))
+            }
+        }
+        .frame(width: 44, height: 44)
+        .clipShape(Circle())
+    }
+
+    private func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) {
+        guard case .success(let authorization) = result,
+              let cred = authorization.credential as? ASAuthorizationAppleIDCredential,
+              let tokenData = cred.identityToken,
+              let token = String(data: tokenData, encoding: .utf8) else {
+            return  // cancelled or no token
+        }
+        let name = [cred.fullName?.givenName, cred.fullName?.familyName]
+            .compactMap { $0 }
+            .joined(separator: " ")
+        Task {
+            await AuthStore.shared.loginWithApple(
+                identityToken: token,
+                fullName: name.isEmpty ? nil : name
+            )
+            await vm.load(force: true)   // refresh list for the resolved account
+        }
+    }
+
     private var titleSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("My Generations")
@@ -247,6 +339,10 @@ struct MyGenerationsView: View {
             Text("No generations yet").font(.system(size: 20, weight: .bold)).foregroundStyle(.white)
             Text("Your processed photos will appear here.").font(.system(size: 14)).foregroundStyle(.white.opacity(0.7))
             Spacer()
+
+            profileSection
+                .padding(.horizontal, 16)
+                .padding(.bottom, 24)
         }
     }
 }

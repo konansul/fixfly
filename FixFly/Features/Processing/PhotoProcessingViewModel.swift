@@ -84,12 +84,15 @@ class PhotoProcessingViewModel: ObservableObject {
 
                     if statusResponse.status == "done" {
                         outputUrl = statusResponse.output_url
+                        let kind = (statusResponse.output_url?.lowercased().hasSuffix(".mp4") == true) ? "video" : "photo"
+                        AppAnalytics.track(.generateCompleted(kind: kind))
                         progressAmount = 1.0
                         remainingTimeEstimate = "Done!"
                         isProcessingComplete = true
                         break
                     } else if statusResponse.status == "failed" {
                         errorText = statusResponse.error_text
+                        AppAnalytics.track(.generateFailed(kind: "unknown", reason: statusResponse.error_text ?? "unknown"))
                         remainingTimeEstimate = "Failed"
                         hasError = true
                         break

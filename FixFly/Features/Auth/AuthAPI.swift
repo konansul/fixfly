@@ -24,11 +24,16 @@ final class AuthAPI {
         return dto
     }
 
-    func loginWithGoogle(idToken: String) async throws -> TokenResponseDTO {
+    func loginWithApple(identityToken: String, fullName: String?) async throws -> TokenResponseDTO {
+        var body: [String: Any] = ["identity_token": identityToken]
+        if let fullName, !fullName.isEmpty { body["full_name"] = fullName }
+
+        // requiresAuth: true forwards the current anonymous JWT so the backend
+        // links Apple to that account (keeps coins/history).
         let dto: TokenResponseDTO = try await ClientAPI.shared.post(
-            "/v1/google",
-            jsonBody: ["id_token": idToken],
-            requiresAuth: false
+            "/v1/apple",
+            jsonBody: body,
+            requiresAuth: true
         )
         TokenStore.shared.accessToken = dto.accessToken
         return dto

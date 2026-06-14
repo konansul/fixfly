@@ -7,9 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		560B71162F5332A600AF042E /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 560B71152F5332A600AF042E /* GoogleSignIn */; };
-		560B71182F5332A600AF042E /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 560B71172F5332A600AF042E /* GoogleSignInSwift */; };
 		569A41F12F5F323A00689C97 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 569A41F02F5F323A00689C97 /* KeychainAccess */; };
+		56B2BFBE2FDEB64800E0E1DD /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 56B2BFBD2FDEB64800E0E1DD /* FirebaseAnalytics */; };
+		56B2BFC02FDEB64800E0E1DD /* FirebaseAnalyticsCore in Frameworks */ = {isa = PBXBuildFile; productRef = 56B2BFBF2FDEB64800E0E1DD /* FirebaseAnalyticsCore */; };
+		56B2BFC22FDEB64800E0E1DD /* FirebaseAnalyticsIdentitySupport in Frameworks */ = {isa = PBXBuildFile; productRef = 56B2BFC12FDEB64800E0E1DD /* FirebaseAnalyticsIdentitySupport */; };
+		56B2BFCC2FDEB64800E0E1DD /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 56B2BFCB2FDEB64800E0E1DD /* FirebaseCore */; };
 		56D68C3B2F76B678003760B0 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 56D68C3A2F76B678003760B0 /* Kingfisher */; };
 /* End PBXBuildFile section */
 
@@ -54,10 +56,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				56B2BFBE2FDEB64800E0E1DD /* FirebaseAnalytics in Frameworks */,
+				56B2BFC22FDEB64800E0E1DD /* FirebaseAnalyticsIdentitySupport in Frameworks */,
+				56B2BFCC2FDEB64800E0E1DD /* FirebaseCore in Frameworks */,
 				56D68C3B2F76B678003760B0 /* Kingfisher in Frameworks */,
-				560B71162F5332A600AF042E /* GoogleSignIn in Frameworks */,
-				560B71182F5332A600AF042E /* GoogleSignInSwift in Frameworks */,
 				569A41F12F5F323A00689C97 /* KeychainAccess in Frameworks */,
+				56B2BFC02FDEB64800E0E1DD /* FirebaseAnalyticsCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -116,10 +120,12 @@
 			);
 			name = FixFly;
 			packageProductDependencies = (
-				560B71152F5332A600AF042E /* GoogleSignIn */,
-				560B71172F5332A600AF042E /* GoogleSignInSwift */,
 				569A41F02F5F323A00689C97 /* KeychainAccess */,
 				56D68C3A2F76B678003760B0 /* Kingfisher */,
+				56B2BFBD2FDEB64800E0E1DD /* FirebaseAnalytics */,
+				56B2BFBF2FDEB64800E0E1DD /* FirebaseAnalyticsCore */,
+				56B2BFC12FDEB64800E0E1DD /* FirebaseAnalyticsIdentitySupport */,
+				56B2BFCB2FDEB64800E0E1DD /* FirebaseCore */,
 			);
 			productName = FixFly;
 			productReference = 562EFE982F50C7010019C0CB /* FixFly.app */;
@@ -174,9 +180,9 @@
 			mainGroup = 562EFE8F2F50C7010019C0CB;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				560B71142F5332A600AF042E /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				569A41EF2F5F323A00689C97 /* XCRemoteSwiftPackageReference "KeychainAccess" */,
 				56D68C382F76B4C6003760B0 /* XCRemoteSwiftPackageReference "Kingfisher" */,
+				56B2BFB82FDEB53700E0E1DD /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 562EFE992F50C7010019C0CB /* Products */;
@@ -504,20 +510,20 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		560B71142F5332A600AF042E /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 9.1.0;
-			};
-		};
 		569A41EF2F5F323A00689C97 /* XCRemoteSwiftPackageReference "KeychainAccess" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/kishikawakatsumi/KeychainAccess";
 			requirement = {
 				branch = master;
 				kind = branch;
+			};
+		};
+		56B2BFB82FDEB53700E0E1DD /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.14.0;
 			};
 		};
 		56D68C382F76B4C6003760B0 /* XCRemoteSwiftPackageReference "Kingfisher" */ = {
@@ -531,20 +537,30 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		560B71152F5332A600AF042E /* GoogleSignIn */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 560B71142F5332A600AF042E /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
-			productName = GoogleSignIn;
-		};
-		560B71172F5332A600AF042E /* GoogleSignInSwift */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 560B71142F5332A600AF042E /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
-			productName = GoogleSignInSwift;
-		};
 		569A41F02F5F323A00689C97 /* KeychainAccess */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 569A41EF2F5F323A00689C97 /* XCRemoteSwiftPackageReference "KeychainAccess" */;
 			productName = KeychainAccess;
+		};
+		56B2BFBD2FDEB64800E0E1DD /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 56B2BFB82FDEB53700E0E1DD /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		56B2BFBF2FDEB64800E0E1DD /* FirebaseAnalyticsCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 56B2BFB82FDEB53700E0E1DD /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsCore;
+		};
+		56B2BFC12FDEB64800E0E1DD /* FirebaseAnalyticsIdentitySupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 56B2BFB82FDEB53700E0E1DD /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsIdentitySupport;
+		};
+		56B2BFCB2FDEB64800E0E1DD /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 56B2BFB82FDEB53700E0E1DD /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
 		};
 		56D68C3A2F76B678003760B0 /* Kingfisher */ = {
 			isa = XCSwiftPackageProductDependency;

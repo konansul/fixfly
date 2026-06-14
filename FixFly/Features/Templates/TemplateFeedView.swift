@@ -195,6 +195,7 @@ struct TemplateFeedView: View {
             }
 
             prefetchModelImages()
+            AppAnalytics.track(.templateOpened(template: activeTemplate?.styleId))
         }
     }
 
@@ -353,6 +354,7 @@ struct TemplateFeedView: View {
         }
 
         let isVideo = (template.actualResultType == .video)
+        AppAnalytics.track(.generateStarted(kind: isVideo ? "video" : "photo", template: template.styleId))
         let path = isVideo ? "/v1/generate-veo-video" : "/v1/generate-nano-banana"
         
         var extra: [String: String] = [:]
