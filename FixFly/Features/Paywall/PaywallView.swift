@@ -38,7 +38,10 @@ struct PaywallView: View {
                     .padding(.top, 18)
             }
         }
-        .task { await vm.loadProducts() }
+        .task {
+            AppAnalytics.track(.paywallShown(source: "paywall"))
+            await vm.loadProducts()
+        }
         .onChange(of: vm.errorText) { _, newValue in
             if newValue != nil {
                 UINotificationFeedbackGenerator().notificationOccurred(.error)

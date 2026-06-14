@@ -60,7 +60,7 @@ final class AuthStore: ObservableObject {
         }
     }
 
-    func loginWithGoogle(idToken: String) async {
+    func loginWithApple(identityToken: String, fullName: String?) async {
         guard !isLoading else { return }
 
         isLoading = true
@@ -68,24 +68,19 @@ final class AuthStore: ObservableObject {
         defer { isLoading = false }
 
         do {
-            let dto = try await AuthAPI.shared.loginWithGoogle(idToken: idToken)
+            let dto = try await AuthAPI.shared.loginWithApple(identityToken: identityToken, fullName: fullName)
             self.user = dto.user
+            AppAnalytics.track(.signInWithApple)
 
-            do {
-                try await refreshMe()
-            } catch {
-                // Если нужно, здесь можно добавить обработку ошибки обновления профиля
-            }
-
+            try? await refreshMe()
             await WalletManager.shared.refreshBalance()
 
-            // User changed — re-register the device token under the new account.
+            // User may have switched (returning user on a new device) — re-register
+            // the device token under the resolved account.
             PushService.shared.onAuthChanged()
         } catch {
+            // Keep the existing anonymous session on failure — don't sign out.
             errorText = error.localizedDescription
-            TokenStore.shared.clear()
-            user = nil
-            WalletManager.shared.clear()
         }
     }
 

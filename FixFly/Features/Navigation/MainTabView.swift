@@ -9,6 +9,15 @@ import SwiftUI
 
 enum AppTab: Hashable {
     case home, library, generate, profile
+
+    var screenName: String {
+        switch self {
+        case .home: return "Home"
+        case .library: return "Library"
+        case .generate: return "Generate"
+        case .profile: return "Profile"
+        }
+    }
 }
 
 struct MainTabView: View {
@@ -47,6 +56,12 @@ struct MainTabView: View {
         .environmentObject(auth)
         .task {
             await auth.bootstrap()
+        }
+        .onAppear {
+            AppAnalytics.track(.screen(name: selection.screenName))
+        }
+        .onChange(of: selection) { _, newValue in
+            AppAnalytics.track(.screen(name: newValue.screenName))
         }
         .onChange(of: router.pendingGenerationTaskId) { _, newValue in
             // A tapped "generation done" push wants to open the result — that

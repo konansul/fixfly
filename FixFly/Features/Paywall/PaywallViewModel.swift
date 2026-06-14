@@ -108,9 +108,11 @@ final class PaywallViewModel: ObservableObject {
             }
             
             await checkActiveSubscription()
+            AppAnalytics.track(.purchaseSuccess(productId: selectedProductId))
             return true
         } catch {
             errorText = error.localizedDescription
+            AppAnalytics.track(.purchaseFailed(productId: selectedProductId, reason: error.localizedDescription))
             return false
         }
     }

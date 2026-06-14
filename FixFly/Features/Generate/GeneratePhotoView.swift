@@ -68,6 +68,9 @@ struct GeneratePhotoFormView: View {
         .onTapGesture {
             isPromptFocused = false
         }
+        .onAppear {
+            AppAnalytics.track(.featureSelected(kind: "photo"))
+        }
         .onChange(of: photoPickerItems) { oldValue, newItems in
             Task {
                 selectedImages.removeAll()
@@ -394,6 +397,7 @@ struct GeneratePhotoFormView: View {
     
     private func startGeneration() {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        AppAnalytics.track(.generateStarted(kind: "photo", template: nil))
         isPromptFocused = false
         isGenerating = true
         

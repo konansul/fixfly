@@ -69,6 +69,10 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
+            argument = "-FIRDebugEnabled"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
             argument = "-SwiftUI_ColorIntermediateUpdates 1"
             isEnabled = "YES">
          </CommandLineArgument>

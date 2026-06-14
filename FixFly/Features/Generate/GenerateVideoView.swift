@@ -71,6 +71,9 @@ struct GenerateVideoFormView: View {
         .onTapGesture {
             isPromptFocused = false
         }
+        .onAppear {
+            AppAnalytics.track(.featureSelected(kind: "video"))
+        }
         .onChange(of: photoPickerItems) { oldValue, newItems in
             Task {
                 selectedImages.removeAll()
@@ -380,6 +383,7 @@ struct GenerateVideoFormView: View {
     
     private func startGeneration() {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        AppAnalytics.track(.generateStarted(kind: "video", template: nil))
         isPromptFocused = false
         isGenerating = true
         

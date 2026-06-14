@@ -4,14 +4,17 @@
 //
 
 import SwiftUI
-import GoogleSignIn
 import KeychainAccess
+import FirebaseCore
 
 final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        FirebaseApp.configure()
+        AppAnalytics.track(.appOpen)
+
         // Set the notification delegate early so foreground notifications show
         // and taps are routed.
         NotificationManager.shared.configure()
@@ -51,9 +54,6 @@ struct FixFlyApp: App {
         WindowGroup {
             AppLoadingView()
                 .preferredColorScheme(.dark)
-                .onOpenURL { url in
-                    GIDSignIn.sharedInstance.handle(url)
-                }
         }
     }
 }
