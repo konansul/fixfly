@@ -65,7 +65,6 @@ final class PushService {
         let body: [String: Any] = [
             "token": hex,
             "platform": "ios",
-            "install_id": AnonymousInstallID.getOrCreate(),
             "environment": environment
         ]
 

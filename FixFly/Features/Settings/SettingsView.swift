@@ -2,7 +2,6 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var showCopiedToast = false
     @State private var isRestoring = false
     @State private var restoreMessage: String?
     @State private var showDeleteConfirm = false
@@ -14,13 +13,6 @@ struct SettingsView: View {
         return "Version \(version) (\(build))"
     }
     
-    private var deviceID: String {
-        if let serverID = AuthStore.shared.user?.id {
-            return serverID
-        }
-        return AnonymousInstallID.getOrCreate()
-    }
-
     var body: some View {
         ZStack {
             Color.clear.fixFlyBackground()
@@ -39,7 +31,7 @@ struct SettingsView: View {
                             settingsRow(title: "Rate Us", icon: "star")
                         }
                         
-                        if let url = URL(string: "https://fixfly.app") {
+                        if let url = URL(string: ConfigAPI.appStoreURL) {
                             ShareLink(item: url) {
                                 settingsRow(title: "Share App", icon: "square.and.arrow.up")
                             }
@@ -65,10 +57,6 @@ struct SettingsView: View {
 
                         Button { openURL(LegalLinks.termsOfUse.absoluteString) } label: {
                             settingsRow(title: "Terms of Use", icon: "doc.text")
-                        }
-                        
-                        Button { copyDeviceID() } label: {
-                            settingsRow(title: "Device ID", icon: "iphone", value: deviceID, rightIcon: "doc.on.doc")
                         }
                     }
 
@@ -99,21 +87,6 @@ struct SettingsView: View {
                 .padding(.top, 20)
             }
             
-            if showCopiedToast {
-                VStack {
-                    Spacer()
-                    Text("Device ID copied to clipboard")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(Capsule().fill(Color.white.opacity(0.2)))
-                        .padding(.bottom, 40)
-                }
-                .transition(.opacity.combined(with: .move(edge: .bottom)))
-                .zIndex(1)
-            }
-
             if isRestoring || isDeleting {
                 ZStack {
                     Color.black.opacity(0.4).ignoresSafeArea()
@@ -201,7 +174,8 @@ struct SettingsView: View {
 
     private func openMail() {
         let subject = "FixFly Support".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        let body = "Please describe your issue below:\n\n\n\n--- \nApp Version: \(appVersion)\nDevice ID: \(deviceID)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let userID = AuthStore.shared.user?.id ?? "—"
+        let body = "Please describe your issue below:\n\n\n\n--- \nApp Version: \(appVersion)\nUser ID: \(userID)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         
         let mailtoURL = "mailto:konansulx@gmail.com?subject=\(subject)&body=\(body)"
         
@@ -211,29 +185,12 @@ struct SettingsView: View {
     }
 
     private func rateApp() {
-        let appID = "123456789"
-        let urlString = "itms-apps://itunes.apple.com/app/id\(appID)?action=write-review"
+        let urlString = "\(ConfigAPI.appStoreURL)?action=write-review"
         if let url = URL(string: urlString) {
             UIApplication.shared.open(url)
         }
     }
 
-    private func copyDeviceID() {
-        UIPasteboard.general.string = deviceID
-        
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.success)
-        
-        withAnimation(.spring()) {
-            showCopiedToast = true
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            withAnimation(.spring()) {
-                showCopiedToast = false
-            }
-        }
-    }
 
     private func restorePurchases() {
         guard !isRestoring else { return }
