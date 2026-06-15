@@ -9,93 +9,74 @@ struct PaywallView: View {
     }
 
     var body: some View {
-        ZStack {
-            TemplateVideoWall()
+        NavigationStack {
+            ZStack {
+                TemplateVideoWall()
+                    .ignoresSafeArea()
+
+                // Overall dim so titles/prices stay readable over the moving wall.
+                Color.black.opacity(0.4)
+                    .ignoresSafeArea()
+
+                LinearGradient(
+                    colors: [
+                        Color.black.opacity(0.25),
+                        Color.black.opacity(0.45),
+                        Color.black.opacity(0.78),
+                        Color.black.opacity(0.96),
+                        Color.black
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
                 .ignoresSafeArea()
 
-            // Overall dim so titles/prices stay readable over the moving wall.
-            Color.black.opacity(0.4)
-                .ignoresSafeArea()
+                VStack(spacing: 0) {
+                    Spacer()
 
-            LinearGradient(
-                colors: [
-                    Color.black.opacity(0.25),
-                    Color.black.opacity(0.45),
-                    Color.black.opacity(0.78),
-                    Color.black.opacity(0.96),
-                    Color.black
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                Spacer()
-
-                content
-                    .padding(.horizontal, 18)
-                    .padding(.top, 18)
+                    content
+                        .padding(.horizontal, 18)
+                        .padding(.top, 18)
+                }
             }
-        }
-        // Presented as a sheet — нативная Liquid Glass кнопка закрытия (X).
-        .overlay(alignment: .topTrailing) {
-            closeButton
-                .padding(.trailing, 16)
-                .padding(.top, 12)
-        }
-        .task {
-            AppAnalytics.track(.paywallShown(source: "paywall"))
-            await vm.loadProducts()
-        }
-        .onChange(of: vm.errorText) { _, newValue in
-            if newValue != nil {
-                UINotificationFeedbackGenerator().notificationOccurred(.error)
+            // Native toolbar X on the left — same as WalletCoinsSheetView.
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                }
             }
-        }
-        .alert(
-            "Purchase failed",
-            isPresented: Binding(
-                get: { vm.errorText != nil },
-                set: { _ in vm.errorText = nil }
-            )
-        ) {
-            Button("OK", role: .cancel) { vm.errorText = nil }
-        } message: {
-            Text(vm.errorText ?? "")
-        }
-        // Paywall is a fullScreenCover, so the tab-root gate can't appear above
-        // it — host the sign-in gate here too for the Buy action.
-        .signInGate()
-    }
-
-    /// Кнопка закрытия «X»: на iOS 26 — нативный Liquid Glass button style,
-    /// на iOS 18 — фолбэк на стеклянный круг.
-    @ViewBuilder
-    private var closeButton: some View {
-        if #available(iOS 26.0, *) {
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 32, height: 32)
-                    .glassEffect(.regular.interactive(), in: .circle)
+            .task {
+                AppAnalytics.track(.paywallShown(source: "paywall"))
+                await vm.loadProducts()
             }
-            .buttonStyle(.plain)
-        } else {
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 36, height: 36)
-                    .background(.ultraThinMaterial, in: Circle())
-                    .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 0.5))
+            .onChange(of: vm.errorText) { _, newValue in
+                if newValue != nil {
+                    UINotificationFeedbackGenerator().notificationOccurred(.error)
+                }
             }
-            .buttonStyle(.plain)
+            .alert(
+                "Purchase failed",
+                isPresented: Binding(
+                    get: { vm.errorText != nil },
+                    set: { _ in vm.errorText = nil }
+                )
+            ) {
+                Button("OK", role: .cancel) { vm.errorText = nil }
+            } message: {
+                Text(vm.errorText ?? "")
+            }
+            // Paywall is a fullScreenCover, so the tab-root gate can't appear
+            // above it — host the sign-in gate here too for the Buy action.
+            .signInGate()
         }
     }
 
