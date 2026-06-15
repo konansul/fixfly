@@ -115,8 +115,10 @@ final class AuthStore: ObservableObject {
     }
 
     /// Silently re-applies active StoreKit entitlements (subscriptions) to the
-    /// backend so the current account owns them. Best-effort.
+    /// backend so the current account owns them. Best-effort. Uses the local
+    /// entitlement cache (no AppStore.sync(), which would prompt for the Apple
+    /// ID password) — that prompt belongs only to the explicit Restore button.
     private func reclaimEntitlements() async {
-        try? await StoreManager.shared.restore()
+        await StoreManager.shared.reapplyEntitlements()
     }
 }
