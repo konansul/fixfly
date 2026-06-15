@@ -68,6 +68,10 @@ struct MainTabView: View {
         .signInGate(auth)
         .task {
             await auth.bootstrap()
+            // Ask for notifications right after entering the app. On grant this
+            // also registers for remote push (APNs token → backend), which is
+            // what makes "your photo is ready" and renewal pushes actually work.
+            await NotificationManager.shared.requestAuthorization()
         }
         .onAppear {
             AppAnalytics.track(.screen(name: selection.screenName))
