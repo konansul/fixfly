@@ -65,6 +65,7 @@ struct MainTabView: View {
                 .presentationBackground(.clear)
             }
         }
+        .signInGate(auth)
         .task {
             await auth.bootstrap()
         }

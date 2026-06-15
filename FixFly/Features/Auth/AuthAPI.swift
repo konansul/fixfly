@@ -9,31 +9,16 @@ final class AuthAPI {
     static let shared = AuthAPI()
     private init() {}
 
-    func loginAnonymous(installID: String) async throws -> AnonymousAuthResponseDTO {
-        let dto: AnonymousAuthResponseDTO = try await ClientAPI.shared.post(
-            "/v1/auth/anonymous",
-            jsonBody: [
-                "install_id": installID,
-                "platform": "ios",
-                "app_version": Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
-            ],
-            requiresAuth: false
-        )
-
-        TokenStore.shared.accessToken = dto.accessToken
-        return dto
-    }
-
     func loginWithApple(identityToken: String, fullName: String?) async throws -> TokenResponseDTO {
         var body: [String: Any] = ["identity_token": identityToken]
         if let fullName, !fullName.isEmpty { body["full_name"] = fullName }
 
-        // requiresAuth: true forwards the current anonymous JWT so the backend
-        // links Apple to that account (keeps coins/history).
+        // Apple is the only identity — no current JWT to forward. The backend
+        // finds-or-creates the account by the Apple `sub`.
         let dto: TokenResponseDTO = try await ClientAPI.shared.post(
             "/v1/apple",
             jsonBody: body,
-            requiresAuth: true
+            requiresAuth: false
         )
         TokenStore.shared.accessToken = dto.accessToken
         return dto

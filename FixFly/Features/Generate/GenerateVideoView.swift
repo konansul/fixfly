@@ -382,6 +382,9 @@ struct GenerateVideoFormView: View {
     }
     
     private func startGeneration() {
+        // Sign in with Apple is required before generating (guests browse only).
+        guard AuthStore.shared.requireSignIn() else { return }
+
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         AppAnalytics.track(.generateStarted(kind: "video", template: nil))
         isPromptFocused = false
