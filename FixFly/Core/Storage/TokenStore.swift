@@ -5,8 +5,7 @@
 //  Created by Kanan Sultanov on 28.02.26.
 //
 //  The JWT access token is sensitive, so it lives in the Keychain (encrypted),
-//  not UserDefaults (plaintext). Uses the same KeychainAccess service as
-//  AnonymousInstallID.
+//  not UserDefaults (plaintext).
 //
 
 import Foundation
