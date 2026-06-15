@@ -66,6 +66,9 @@ struct GenerateView: View {
                     }
                 }
             }
+            .fullScreenCover(isPresented: $showPaywall) {
+                PaywallView()
+            }
             .toolbar {
                 NavigationBar(showPaywall: $showPaywall)
             }

@@ -14,6 +14,9 @@ final class AuthStore: ObservableObject {
     @Published var user: BackendUserDTO?
     @Published var isLoading = false
     @Published var errorText: String?
+    /// Set when a brand-new user just received welcome coins — the UI presents
+    /// the welcome-bonus modal once and then clears it. nil / 0 = no modal.
+    @Published var pendingSignupBonus: Int?
 
     private init() {}
 
@@ -50,7 +53,11 @@ final class AuthStore: ObservableObject {
             let installID = AnonymousInstallID.getOrCreate()
             let dto = try await AuthAPI.shared.loginAnonymous(installID: installID)
             self.user = dto.user
-            
+
+            if dto.signupBonusGranted > 0 {
+                self.pendingSignupBonus = dto.signupBonusGranted
+            }
+
             await WalletManager.shared.refreshBalance()
         } catch {
             errorText = error.localizedDescription
@@ -87,5 +94,26 @@ final class AuthStore: ObservableObject {
     func refreshMe() async throws {
         let me = try await AuthAPI.shared.me()
         self.user = me
+    }
+
+    /// Permanently deletes the account on the server, then starts a fresh
+    /// anonymous session so the app stays usable.
+    func deleteAccount() async -> Bool {
+        guard !isLoading else { return false }
+        isLoading = true
+        errorText = nil
+        defer { isLoading = false }
+
+        do {
+            try await AuthAPI.shared.deleteAccount()
+            user = nil
+            WalletManager.shared.clear()
+            await loginAnonymous()           // new empty anonymous account
+            PushService.shared.onAuthChanged()
+            return true
+        } catch {
+            errorText = error.localizedDescription
+            return false
+        }
     }
 }

@@ -29,11 +29,6 @@ struct NavigationBar: ToolbarContent {
             }
             .buttonStyle(.plain)
             .fixedSize(horizontal: true, vertical: false)
-            .sheet(isPresented: $showPaywall) {
-                PaywallView()
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
-            }
         }
     }
 }

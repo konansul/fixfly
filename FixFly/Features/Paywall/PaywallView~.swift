@@ -301,7 +301,7 @@ struct PaywallView: View {
                     benefitRow(icon: "🎁", text: "7,200 Coins included every month")
                 }
             } else {
-                benefitRow(icon: "🪙", text: "One-time coin packs")
+                benefitRow(icon: "🪙", text: "One-time coin packs.")
             }
         }
     }

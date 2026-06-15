@@ -146,9 +146,8 @@ struct TemplateFeedView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showPaywall) {
+        .fullScreenCover(isPresented: $showPaywall) {
             PaywallView()
-                .presentationDragIndicator(.visible)
         }
         .navigationDestination(isPresented: $showResult) {
             if let videoURL = resultVideoURL {

@@ -35,9 +35,20 @@ struct TokenResponseDTO: Decodable {
 struct AnonymousAuthResponseDTO: Decodable {
     let accessToken: String
     let user: BackendUserDTO
+    /// One-time welcome coins granted on this call (0 for returning users or
+    /// when the bonus is disabled on the backend).
+    let signupBonusGranted: Int
 
     enum CodingKeys: String, CodingKey {
         case accessToken = "access_token"
         case user
+        case signupBonusGranted = "signup_bonus_granted"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        accessToken = try c.decode(String.self, forKey: .accessToken)
+        user = try c.decode(BackendUserDTO.self, forKey: .user)
+        signupBonusGranted = try c.decodeIfPresent(Int.self, forKey: .signupBonusGranted) ?? 0
     }
 }

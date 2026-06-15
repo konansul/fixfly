@@ -90,6 +90,9 @@ struct LibraryView: View {
                 )
                 .toolbar(.hidden, for: .tabBar)
             }
+            .fullScreenCover(isPresented: $showPaywall) {
+                PaywallView()
+            }
         }
     }
 
