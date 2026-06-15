@@ -24,10 +24,10 @@ struct WelcomeBonusView: View {
             VStack(spacing: 22) {
                 Image(systemName: "bitcoinsign.circle.fill")
                     .font(.system(size: 88))
-                    .foregroundStyle(FixFlyGradient.linear)
+                    .foregroundStyle(.yellow)
                     .scaleEffect(coinScale)
                     .rotation3DEffect(.degrees(coinRotation), axis: (x: 0, y: 1, z: 0))
-                    .shadow(color: FixFlyGradient.accent.opacity(0.5), radius: 24)
+                    .shadow(color: .yellow.opacity(0.4), radius: 24)
 
                 VStack(spacing: 8) {
                     Text("Welcome gift!")
