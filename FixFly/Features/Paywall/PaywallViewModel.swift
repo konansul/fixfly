@@ -80,6 +80,10 @@ final class PaywallViewModel: ObservableObject {
     }
 
     func purchaseSelected() async -> Bool {
+        // Sign in with Apple is required before buying — coins/subscriptions are
+        // tied to the account. A guest gets the sign-in sheet instead.
+        guard AuthStore.shared.requireSignIn() else { return false }
+
         // Продукты могли не загрузиться при открытии (нет сети / конфигурация
         // App Store Connect) — пробуем ещё раз и показываем ошибку вместо
         // молчаливого выхода.

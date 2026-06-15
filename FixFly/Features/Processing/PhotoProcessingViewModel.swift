@@ -126,15 +126,13 @@ class PhotoProcessingViewModel: ObservableObject {
     
     func requestNotificationPermission() {
         if notificationStatus == .authorized { return }
-        
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, _ in
-            DispatchQueue.main.async {
-                if granted {
-                    self.notificationStatus = .authorized
-                } else {
-                    self.notificationStatus = .denied
-                }
-            }
+
+        // Route through NotificationManager so a grant also registers for remote
+        // push (APNs token → backend). Requesting directly here only enabled
+        // local notifications and left the backend with no device to push to.
+        Task { @MainActor in
+            let granted = await NotificationManager.shared.requestAuthorization()
+            self.notificationStatus = granted ? .authorized : .denied
         }
     }
 }

@@ -2,8 +2,7 @@ import SwiftUI
 
 struct AppLoadingView: View {
     @StateObject private var viewModel = AppLoadingViewModel()
-
-    @AppStorage("onboarding_completed") private var onboardingCompleted = false
+    @ObservedObject private var auth = AuthStore.shared
 
     @State private var logoScale: CGFloat = 0.94
     @State private var logoOpacity: Double = 0.85
@@ -11,18 +10,18 @@ struct AppLoadingView: View {
     @State private var titleOpacity: Double = 0.0
 
     var body: some View {
-        // Проверяем состояние: если готово - показываем главный экран
+        // Sign in with Apple is mandatory: an authed user goes straight to the
+        // app, everyone else must complete onboarding (which can't be skipped).
+        // Deleting the account drops `user` to nil and lands back here.
         if viewModel.isReady {
-            if onboardingCompleted {
+            if auth.user != nil {
                 MainTabView()
                     .preferredColorScheme(.dark)
                     .transition(.opacity)
             } else {
-                OnboardingView {
-                    withAnimation { onboardingCompleted = true }
-                }
-                .preferredColorScheme(.dark)
-                .transition(.opacity)
+                OnboardingView()
+                    .preferredColorScheme(.dark)
+                    .transition(.opacity)
             }
         } else {
             // Иначе показываем экран загрузки

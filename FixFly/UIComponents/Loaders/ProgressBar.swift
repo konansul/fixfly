@@ -17,16 +17,7 @@ struct ProgressBar: View {
                     .fill(Color.white.opacity(0.15))
 
                 Capsule()
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.white,
-                                Color.white.opacity(0.6)
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
+                    .fill(FixFlyGradient.linear)
                     .frame(width: geo.size.width * progress)
             }
         }

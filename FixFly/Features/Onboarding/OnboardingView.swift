@@ -9,7 +9,7 @@ import SwiftUI
 import AuthenticationServices
 
 struct OnboardingView: View {
-    var onFinish: () -> Void
+    @ObservedObject private var auth = AuthStore.shared
 
     @State private var page = 0
 
@@ -28,17 +28,8 @@ struct OnboardingView: View {
             .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                HStack {
-                    Spacer()
-                    if page < 2 {
-                        Button("Skip") { finish() }
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.7))
-                    }
-                }
-                .frame(height: 30)
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
+                // Sign in with Apple is required — there is no skip.
+                Color.clear.frame(height: 42)
 
                 Spacer()
 
@@ -115,7 +106,7 @@ struct OnboardingView: View {
             }
             .buttonStyle(.plain)
         } else {
-            VStack(spacing: 14) {
+            VStack(spacing: 10) {
                 SignInWithAppleButton(.signIn) { request in
                     request.requestedScopes = [.fullName, .email]
                 } onCompletion: { result in
@@ -124,10 +115,17 @@ struct OnboardingView: View {
                 .signInWithAppleButtonStyle(.white)
                 .frame(height: 54)
                 .clipShape(Capsule())
+                .disabled(auth.isLoading)
+                .opacity(auth.isLoading ? 0.5 : 1)
 
-                Button("Maybe later") { finish() }
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.6))
+                if auth.isLoading {
+                    ProgressView().tint(.white)
+                } else if let error = auth.errorText {
+                    Text(error)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.red.opacity(0.9))
+                        .multilineTextAlignment(.center)
+                }
             }
         }
     }
@@ -142,16 +140,13 @@ struct OnboardingView: View {
         let name = [cred.fullName?.givenName, cred.fullName?.familyName]
             .compactMap { $0 }
             .joined(separator: " ")
+        // On success AuthStore.user becomes non-nil and AppLoadingView swaps to
+        // the main app; on failure auth.errorText is shown and we stay here.
         Task {
-            await AuthStore.shared.loginWithApple(
+            await auth.loginWithApple(
                 identityToken: token,
                 fullName: name.isEmpty ? nil : name
             )
-            finish()
         }
-    }
-
-    private func finish() {
-        onFinish()
     }
 }
