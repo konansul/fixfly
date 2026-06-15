@@ -64,6 +64,9 @@ struct PaywallView: View {
         } message: {
             Text(vm.errorText ?? "")
         }
+        // Paywall is a fullScreenCover, so the tab-root gate can't appear above
+        // it — host the sign-in gate here too for the Buy action.
+        .signInGate()
     }
 
     /// Кнопка закрытия «X»: на iOS 26 — нативный Liquid Glass button style,

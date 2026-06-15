@@ -346,6 +346,10 @@ struct TemplateFeedView: View {
     private func startGeneration(_ input: UIImage) async {
         guard let template = activeTemplate else { return }
 
+        // Sign in with Apple is required before generating (guests browse only).
+        let authed = await MainActor.run { AuthStore.shared.requireSignIn() }
+        guard authed else { return }
+
         await MainActor.run {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             isUploading = true
