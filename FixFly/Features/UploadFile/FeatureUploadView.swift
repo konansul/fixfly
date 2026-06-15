@@ -250,7 +250,7 @@ private struct TopBar: View {
                 }
             }
             .buttonStyle(.plain)
-            .sheet(isPresented: $showPaywall) {
+            .fullScreenCover(isPresented: $showPaywall) {
                 PaywallView()
             }
         }

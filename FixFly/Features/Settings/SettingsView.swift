@@ -5,6 +5,8 @@ struct SettingsView: View {
     @State private var showCopiedToast = false
     @State private var isRestoring = false
     @State private var restoreMessage: String?
+    @State private var showDeleteConfirm = false
+    @State private var isDeleting = false
     
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -57,11 +59,11 @@ struct SettingsView: View {
                     }
                     
                     settingsSection {
-                        Button { openURL("https://fixfly.app/privacy") } label: {
+                        Button { openURL(LegalLinks.privacyPolicy.absoluteString) } label: {
                             settingsRow(title: "Privacy Policy", icon: "hand.raised")
                         }
-                        
-                        Button { openURL("https://fixfly.app/terms") } label: {
+
+                        Button { openURL(LegalLinks.termsOfUse.absoluteString) } label: {
                             settingsRow(title: "Terms of Use", icon: "doc.text")
                         }
                         
@@ -69,7 +71,24 @@ struct SettingsView: View {
                             settingsRow(title: "Device ID", icon: "iphone", value: deviceID, rightIcon: "doc.on.doc")
                         }
                     }
-                    
+
+                    settingsSection {
+                        Button { showDeleteConfirm = true } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundStyle(.red)
+                                    .frame(width: 22)
+                                Text("Delete Account")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(.red)
+                                Spacer()
+                            }
+                            .padding(16)
+                            .background(Color.white.opacity(0.001))
+                        }
+                    }
+
                     Text(appVersion)
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.white.opacity(0.4))
@@ -95,12 +114,12 @@ struct SettingsView: View {
                 .zIndex(1)
             }
 
-            if isRestoring {
+            if isRestoring || isDeleting {
                 ZStack {
                     Color.black.opacity(0.4).ignoresSafeArea()
                     VStack(spacing: 12) {
                         ProgressView().tint(.white).scaleEffect(1.2)
-                        Text("Restoring...")
+                        Text(isDeleting ? "Deleting..." : "Restoring...")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(.white.opacity(0.85))
                     }
@@ -119,6 +138,12 @@ struct SettingsView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(restoreMessage ?? "")
+        }
+        .alert("Delete Account?", isPresented: $showDeleteConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) { deleteAccount() }
+        } message: {
+            Text("This permanently deletes your account, coins and creations. This can't be undone.")
         }
     }
     
@@ -178,7 +203,7 @@ struct SettingsView: View {
         let subject = "FixFly Support".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         let body = "Please describe your issue below:\n\n\n\n--- \nApp Version: \(appVersion)\nDevice ID: \(deviceID)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         
-        let mailtoURL = "mailto:konansul@gmail.com?subject=\(subject)&body=\(body)"
+        let mailtoURL = "mailto:konansulx@gmail.com?subject=\(subject)&body=\(body)"
         
         if let url = URL(string: mailtoURL) {
             UIApplication.shared.open(url)
@@ -225,6 +250,17 @@ struct SettingsView: View {
                 restoreMessage = "Couldn't restore purchases. Please try again."
             }
             isRestoring = false
+        }
+    }
+
+    private func deleteAccount() {
+        guard !isDeleting else { return }
+        isDeleting = true
+
+        Task {
+            let ok = await AuthStore.shared.deleteAccount()
+            isDeleting = false
+            if ok { dismiss() }   // leave Settings; app continues with a fresh anonymous account
         }
     }
 }

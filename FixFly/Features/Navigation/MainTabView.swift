@@ -54,6 +54,17 @@ struct MainTabView: View {
         }
         .tint(.white)
         .environmentObject(auth)
+        .fullScreenCover(isPresented: Binding(
+            get: { (auth.pendingSignupBonus ?? 0) > 0 },
+            set: { if !$0 { auth.pendingSignupBonus = nil } }
+        )) {
+            if let coins = auth.pendingSignupBonus {
+                WelcomeBonusView(coins: coins) {
+                    auth.pendingSignupBonus = nil
+                }
+                .presentationBackground(.clear)
+            }
+        }
         .task {
             await auth.bootstrap()
         }

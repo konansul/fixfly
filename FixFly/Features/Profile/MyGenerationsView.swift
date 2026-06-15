@@ -8,6 +8,7 @@ struct MyGenerationsView: View {
     @State private var selectedItemForCompare: GenerationItemDTO?
     @State private var showSettings = false
     @State private var showCoinsSheet = false
+    @State private var appleError: String?
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -121,6 +122,14 @@ struct MyGenerationsView: View {
             .navigationDestination(isPresented: $showSettings) {
                 SettingsView()
             }
+            .alert("Sign in", isPresented: Binding(
+                get: { appleError != nil },
+                set: { if !$0 { appleError = nil } }
+            )) {
+                Button("OK", role: .cancel) { appleError = nil }
+            } message: {
+                Text(appleError ?? "")
+            }
             .onAppear {
                 // Always refetch: a generation may have finished while the
                 // user was elsewhere in the app, and nothing else refreshes
@@ -186,29 +195,16 @@ struct MyGenerationsView: View {
             .background(Color.white.opacity(0.05))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         } else {
-            // Anonymous — offer Sign in with Apple to save the account.
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Save your account")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white)
-                Text("Sign in to keep your coins and creations across devices.")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.white.opacity(0.6))
-                    .fixedSize(horizontal: false, vertical: true)
-
-                SignInWithAppleButton(.signIn) { request in
-                    request.requestedScopes = [.fullName, .email]
-                } onCompletion: { result in
-                    handleAppleSignIn(result)
-                }
-                .signInWithAppleButtonStyle(.white)
-                .frame(height: 48)
-                .clipShape(Capsule())
-                .disabled(auth.isLoading)
+            // Anonymous — bare Sign in with Apple button.
+            SignInWithAppleButton(.signIn) { request in
+                request.requestedScopes = [.fullName, .email]
+            } onCompletion: { result in
+                handleAppleSignIn(result)
             }
-            .padding(14)
-            .background(Color.white.opacity(0.05))
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .signInWithAppleButtonStyle(.white)
+            .frame(height: 50)
+            .clipShape(Capsule())
+            .disabled(auth.isLoading)
         }
     }
 
@@ -231,21 +227,31 @@ struct MyGenerationsView: View {
     }
 
     private func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) {
-        guard case .success(let authorization) = result,
-              let cred = authorization.credential as? ASAuthorizationAppleIDCredential,
-              let tokenData = cred.identityToken,
-              let token = String(data: tokenData, encoding: .utf8) else {
-            return  // cancelled or no token
-        }
-        let name = [cred.fullName?.givenName, cred.fullName?.familyName]
-            .compactMap { $0 }
-            .joined(separator: " ")
-        Task {
-            await AuthStore.shared.loginWithApple(
-                identityToken: token,
-                fullName: name.isEmpty ? nil : name
-            )
-            await vm.load(force: true)   // refresh list for the resolved account
+        switch result {
+        case .failure(let error):
+            // 1001 = user cancelled (ignore). Other codes (e.g. 1000) usually
+            // mean the "Sign in with Apple" capability isn't enabled in the target.
+            if (error as NSError).code == ASAuthorizationError.canceled.rawValue { return }
+            appleError = "Apple sign-in failed: \(error.localizedDescription)"
+
+        case .success(let authorization):
+            guard let cred = authorization.credential as? ASAuthorizationAppleIDCredential,
+                  let tokenData = cred.identityToken,
+                  let token = String(data: tokenData, encoding: .utf8) else {
+                appleError = "Couldn't read Apple credentials."
+                return
+            }
+            let name = [cred.fullName?.givenName, cred.fullName?.familyName]
+                .compactMap { $0 }
+                .joined(separator: " ")
+            Task {
+                await AuthStore.shared.loginWithApple(
+                    identityToken: token,
+                    fullName: name.isEmpty ? nil : name
+                )
+                if let err = auth.errorText { appleError = err }
+                await vm.load(force: true)   // refresh list for the resolved account
+            }
         }
     }
 

@@ -56,4 +56,18 @@ final class AuthAPI {
         TokenStore.shared.clear()
         return res
     }
+
+    func deleteAccount() async throws {
+        let _: OkResponseDTO = try await ClientAPI.shared.request(
+            "/v1/account",
+            method: "DELETE",
+            jsonBody: nil,
+            requiresAuth: true
+        )
+        TokenStore.shared.clear()
+    }
+}
+
+private struct OkResponseDTO: Decodable {
+    let ok: Bool?
 }

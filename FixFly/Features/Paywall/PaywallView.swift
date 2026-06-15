@@ -10,15 +10,19 @@ struct PaywallView: View {
 
     var body: some View {
         ZStack {
-            LocalLoopingVideoView(videoName: "paywall", fileExtension: "MP4")
+            TemplateVideoWall()
+                .ignoresSafeArea()
+
+            // Overall dim so titles/prices stay readable over the moving wall.
+            Color.black.opacity(0.4)
                 .ignoresSafeArea()
 
             LinearGradient(
                 colors: [
-                    Color.black.opacity(0.08),
-                    Color.black.opacity(0.35),
-                    Color.black.opacity(0.70),
-                    Color.black.opacity(0.95),
+                    Color.black.opacity(0.25),
+                    Color.black.opacity(0.45),
+                    Color.black.opacity(0.78),
+                    Color.black.opacity(0.96),
                     Color.black
                 ],
                 startPoint: .top,
@@ -27,16 +31,18 @@ struct PaywallView: View {
             .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                topBar
-                    .padding(.horizontal, 18)
-                    .padding(.top, 25)
-
                 Spacer()
 
                 content
                     .padding(.horizontal, 18)
                     .padding(.top, 18)
             }
+        }
+        // Presented as a sheet — нативная Liquid Glass кнопка закрытия (X).
+        .overlay(alignment: .topTrailing) {
+            closeButton
+                .padding(.trailing, 16)
+                .padding(.top, 12)
         }
         .task {
             AppAnalytics.track(.paywallShown(source: "paywall"))
@@ -60,21 +66,33 @@ struct PaywallView: View {
         }
     }
 
-    private var topBar: some View {
-        HStack {
-            Spacer()
-
+    /// Кнопка закрытия «X»: на iOS 26 — нативный Liquid Glass button style,
+    /// на iOS 18 — фолбэк на стеклянный круг.
+    @ViewBuilder
+    private var closeButton: some View {
+        if #available(iOS 26.0, *) {
             Button {
-                Task { await vm.restore() }
+                dismiss()
             } label: {
-                Text("Restore Purchases")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.90))
-                    .underline()
+                Image(systemName: "xmark")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 32, height: 32)
+                    .glassEffect(.regular.interactive(), in: .circle)
             }
             .buttonStyle(.plain)
-            
-            Spacer()
+        } else {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 36, height: 36)
+                    .background(.ultraThinMaterial, in: Circle())
+                    .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 0.5))
+            }
+            .buttonStyle(.plain)
         }
     }
 
@@ -141,7 +159,23 @@ struct PaywallView: View {
             Text("Payment will be charged to your Apple ID account. Subscriptions automatically renew unless canceled at least 24 hours before the end of the current period.")
                 .font(.system(size: 11, weight: .regular))
                 .foregroundStyle(.white.opacity(0.45))
-                .padding(.bottom, 20)
+
+            HStack(spacing: 14) {
+                Button {
+                    Task { await vm.restore() }
+                } label: {
+                    Text("Restore Purchases")
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+                .buttonStyle(.plain)
+
+                Link("Privacy Policy", destination: LegalLinks.privacyPolicy)
+                Link("Terms of Use", destination: LegalLinks.termsOfUse)
+            }
+            .font(.system(size: 11, weight: .semibold))
+            .tint(.white.opacity(0.6))
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.bottom, 20)
         }
     }
     
@@ -256,7 +290,9 @@ struct PaywallView: View {
         VStack(alignment: .leading, spacing: 10) {
             if forSubscription {
                 benefitRow(icon: "✨", text: "Priority generation speed")
+                
                 benefitRow(icon: "💧", text: "No watermarks")
+                
                 benefitRow(icon: "💎", text: "Unlock all Premium templates")
 
                 if weekly {
@@ -265,7 +301,7 @@ struct PaywallView: View {
                     benefitRow(icon: "🎁", text: "7,200 Coins included every month")
                 }
             } else {
-                benefitRow(icon: "🪙", text: "One-time coin pack. Premium features not included.")
+                benefitRow(icon: "🪙", text: "One-time coin packs")
             }
         }
     }

@@ -3,6 +3,8 @@ import SwiftUI
 struct AppLoadingView: View {
     @StateObject private var viewModel = AppLoadingViewModel()
 
+    @AppStorage("onboarding_completed") private var onboardingCompleted = false
+
     @State private var logoScale: CGFloat = 0.94
     @State private var logoOpacity: Double = 0.85
     @State private var titleOffsetY: CGFloat = 10
@@ -11,11 +13,17 @@ struct AppLoadingView: View {
     var body: some View {
         // Проверяем состояние: если готово - показываем главный экран
         if viewModel.isReady {
-            MainTabView()
+            if onboardingCompleted {
+                MainTabView()
+                    .preferredColorScheme(.dark)
+                    .transition(.opacity)
+            } else {
+                OnboardingView {
+                    withAnimation { onboardingCompleted = true }
+                }
                 .preferredColorScheme(.dark)
-                // Опционально: добавляем плавное растворение экрана загрузки
-                // Если хочешь мгновенное переключение без анимации, удали .transition
                 .transition(.opacity)
+            }
         } else {
             // Иначе показываем экран загрузки
             loadingScreen
