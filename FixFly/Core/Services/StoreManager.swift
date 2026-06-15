@@ -124,9 +124,10 @@ final class StoreManager: ObservableObject {
         }
     }
 
-    /// Restores purchases. Consumables (coins) are not restorable by design;
-    /// this re-applies active entitlements (subscriptions) to the backend so
-    /// Pro access is re-granted on a new device / reinstall.
+    /// Explicit "Restore Purchases" (Settings button). Calls AppStore.sync(),
+    /// which prompts for the Apple ID password — so ONLY call this from a user
+    /// action, never automatically. Re-applies active entitlements to the
+    /// backend so Pro access is re-granted on a new device / reinstall.
     /// Returns the number of active entitlements that were restored.
     @discardableResult
     func restore() async throws -> Int {
@@ -134,18 +135,30 @@ final class StoreManager: ObservableObject {
             throw StoreError.notAuthenticated
         }
 
-        // Pull the latest entitlement state from the App Store.
+        // Force a refresh from the App Store. NOTE: this prompts for the Apple
+        // ID password — acceptable here because the user tapped "Restore".
         try await AppStore.sync()
 
-        var restoredCount = 0
+        return await reapplyEntitlements()
+    }
+
+    /// Silently re-applies active entitlements (subscriptions) to the backend
+    /// from the local StoreKit cache. Unlike restore() this does NOT call
+    /// AppStore.sync(), so it never prompts for the Apple ID password — safe to
+    /// call automatically after login / on launch.
+    @discardableResult
+    func reapplyEntitlements() async -> Int {
+        guard AuthStore.shared.isAuthed else { return 0 }
+
+        var count = 0
         for await result in Transaction.currentEntitlements {
             guard case .verified(let transaction) = result else { continue }
             guard transaction.revocationDate == nil else { continue }
 
             try? await applyTransactionToBackend(transaction, jws: result.jwsRepresentation)
-            restoredCount += 1
+            count += 1
         }
-        return restoredCount
+        return count
     }
 
     private func applyTransactionToBackend(_ transaction: StoreKit.Transaction, jws: String) async throws {
