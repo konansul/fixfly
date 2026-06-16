@@ -55,8 +55,9 @@ final class MyGenerationsViewModel: ObservableObject {
             return
         }
 
+        // Guests aren't an error — the view shows a Sign in with Apple prompt.
         guard AuthStore.shared.isAuthed else {
-            errorText = "You are not authenticated."
+            errorText = nil
             items = []
             return
         }

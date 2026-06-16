@@ -27,7 +27,9 @@ struct MyGenerationsView: View {
                     .allowsHitTesting(false)
 
                 VStack(spacing: 0) {
-                    if vm.isLoading && vm.items.isEmpty {
+                    if !auth.isAuthed {
+                        signedOutView
+                    } else if vm.isLoading && vm.items.isEmpty {
                         loadingView
                     } else if let errorText = vm.errorText, vm.items.isEmpty {
                         errorView(errorText)
@@ -349,6 +351,38 @@ struct MyGenerationsView: View {
             profileSection
                 .padding(.horizontal, 16)
                 .padding(.bottom, 24)
+        }
+    }
+
+    /// Shown to guests instead of an error — invites Sign in with Apple.
+    private var signedOutView: some View {
+        VStack(spacing: 14) {
+            Spacer()
+            Image(systemName: "person.crop.circle.badge.plus")
+                .font(.system(size: 30))
+                .foregroundStyle(.white.opacity(0.85))
+            Text("Sign in to see your creations")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundStyle(.white)
+            Text("Sign in with Apple to keep your coins and generations across devices.")
+                .multilineTextAlignment(.center)
+                .font(.system(size: 14))
+                .foregroundStyle(.white.opacity(0.7))
+                .padding(.horizontal, 28)
+
+            SignInWithAppleButton(.signIn) { request in
+                request.requestedScopes = [.fullName, .email]
+            } onCompletion: { result in
+                handleAppleSignIn(result)
+            }
+            .signInWithAppleButtonStyle(.white)
+            .frame(height: 50)
+            .clipShape(Capsule())
+            .disabled(auth.isLoading)
+            .padding(.horizontal, 40)
+            .padding(.top, 6)
+
+            Spacer()
         }
     }
 }

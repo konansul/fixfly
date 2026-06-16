@@ -3,6 +3,7 @@ import SwiftUI
 struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var vm = PaywallViewModel()
+    @ObservedObject private var auth = AuthStore.shared
 
     private var isCurrentPlanSelected: Bool {
         vm.activeSubscriptionId != nil && vm.selectedProductId == vm.activeSubscriptionId
@@ -77,6 +78,14 @@ struct PaywallView: View {
             // Paywall is a fullScreenCover, so the tab-root gate can't appear
             // above it — host the sign-in gate here too for the Buy action.
             .signInGate()
+            // A guest who tapped Buy gets signed in, then the purchase resumes
+            // automatically — no need to tap Buy a second time.
+            .onChange(of: auth.user?.id) { _, newId in
+                if newId != nil, vm.resumePurchaseAfterSignIn {
+                    vm.resumePurchaseAfterSignIn = false
+                    Task { await vm.purchaseSelected() }
+                }
+            }
         }
     }
 
