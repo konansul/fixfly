@@ -9,6 +9,8 @@ import SwiftUI
 import AuthenticationServices
 
 struct OnboardingView: View {
+    var onFinish: () -> Void
+
     @ObservedObject private var auth = AuthStore.shared
 
     @State private var page = 0
@@ -28,8 +30,17 @@ struct OnboardingView: View {
             .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Sign in with Apple is required — there is no skip.
-                Color.clear.frame(height: 42)
+                HStack {
+                    Spacer()
+                    if page < 2 {
+                        Button("Skip") { finish() }
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
+                }
+                .frame(height: 30)
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
 
                 Spacer()
 
@@ -126,6 +137,11 @@ struct OnboardingView: View {
                         .foregroundStyle(.red.opacity(0.9))
                         .multilineTextAlignment(.center)
                 }
+
+                Button("Maybe later") { finish() }
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.6))
+                    .disabled(auth.isLoading)
             }
         }
     }
@@ -140,13 +156,18 @@ struct OnboardingView: View {
         let name = [cred.fullName?.givenName, cred.fullName?.familyName]
             .compactMap { $0 }
             .joined(separator: " ")
-        // On success AuthStore.user becomes non-nil and AppLoadingView swaps to
-        // the main app; on failure auth.errorText is shown and we stay here.
         Task {
             await auth.loginWithApple(
                 identityToken: token,
                 fullName: name.isEmpty ? nil : name
             )
+            // Success → finish onboarding. On failure errorText is shown and we
+            // stay so the user can retry or skip.
+            if auth.isAuthed { finish() }
         }
+    }
+
+    private func finish() {
+        onFinish()
     }
 }

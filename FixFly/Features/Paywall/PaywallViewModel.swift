@@ -22,6 +22,9 @@ final class PaywallViewModel: ObservableObject {
     @Published var isPurchasing = false
     @Published var errorText: String?
     @Published var activeSubscriptionId: String?
+    /// Set when a guest tapped Buy and we triggered sign-in; the view resumes
+    /// the purchase automatically once the user is authed (no second tap).
+    @Published var resumePurchaseAfterSignIn = false
 
     /// Локализованные цены прямо из StoreKit (валюта/формат витрины пользователя).
     /// Пусто, пока продукты не загрузились — UI показывает плейсхолдер.
@@ -81,8 +84,13 @@ final class PaywallViewModel: ObservableObject {
 
     func purchaseSelected() async -> Bool {
         // Sign in with Apple is required before buying — coins/subscriptions are
-        // tied to the account. A guest gets the sign-in sheet instead.
-        guard AuthStore.shared.requireSignIn() else { return false }
+        // tied to the account. A guest gets the sign-in sheet; once signed in the
+        // view resumes this purchase automatically (see resumePurchaseAfterSignIn).
+        if !AuthStore.shared.isAuthed {
+            resumePurchaseAfterSignIn = true
+            AuthStore.shared.requireSignIn()
+            return false
+        }
 
         // Продукты могли не загрузиться при открытии (нет сети / конфигурация
         // App Store Connect) — пробуем ещё раз и показываем ошибку вместо
