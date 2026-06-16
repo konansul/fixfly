@@ -17,9 +17,6 @@ final class AuthStore: ObservableObject {
     /// Set when a brand-new user just received welcome coins — the UI presents
     /// the welcome-bonus modal once and then clears it. nil / 0 = no modal.
     @Published var pendingSignupBonus: Int?
-    /// Drives the Sign in with Apple gate. Set by `requireSignIn()` when a guest
-    /// tries a value action (Generate / Buy); the app root presents the sheet.
-    @Published var presentSignIn = false
 
     private init() {}
 
@@ -81,11 +78,21 @@ final class AuthStore: ObservableObject {
     }
 
     /// Gate for value actions. Returns true if already signed in; otherwise
-    /// triggers the Sign in with Apple sheet and returns false.
+    /// triggers the native Sign in with Apple sheet directly (no intermediate
+    /// screen) and returns false. On success `user` is set and observers (e.g.
+    /// the paywall) can resume the action.
     @discardableResult
     func requireSignIn() -> Bool {
         if isAuthed { return true }
-        presentSignIn = true
+        AppleSignInCoordinator.shared.start { [weak self] creds in
+            guard let self, let creds else { return }
+            Task {
+                await self.loginWithApple(
+                    identityToken: creds.identityToken,
+                    fullName: creds.fullName
+                )
+            }
+        }
         return false
     }
 
@@ -114,10 +121,6 @@ final class AuthStore: ObservableObject {
         }
     }
 
-    /// Silently re-applies active StoreKit entitlements (subscriptions) to the
-    /// backend so the current account owns them. Best-effort. Uses the local
-    /// entitlement cache (no AppStore.sync(), which would prompt for the Apple
-    /// ID password) — that prompt belongs only to the explicit Restore button.
     private func reclaimEntitlements() async {
         await StoreManager.shared.reapplyEntitlements()
     }
