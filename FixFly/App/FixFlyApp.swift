@@ -36,24 +36,32 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         print("[AppDelegate] remote notification registration failed: \(error)")
     }
 
-    // Re-engagement: arm "come back" reminders when leaving, clear them on return.
-    func applicationDidEnterBackground(_ application: UIApplication) {
-        NotificationManager.shared.scheduleReengagementReminders()
-    }
-
-    func applicationDidBecomeActive(_ application: UIApplication) {
-        NotificationManager.shared.cancelReengagementReminders()
-    }
+    // Re-engagement scheduling moved to FixFlyApp's scenePhase observer —
+    // the app-delegate background/active hooks aren't reliable under SwiftUI.
 }
 
 @main
 struct FixFlyApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
             AppLoadingView()
                 .preferredColorScheme(.dark)
+        }
+        // Re-engagement reminders. Driven by scenePhase because in a SwiftUI
+        // (scene-based) app the AppDelegate's applicationDidEnterBackground /
+        // applicationDidBecomeActive are not reliably called.
+        .onChange(of: scenePhase) { _, newPhase in
+            switch newPhase {
+            case .background:
+                NotificationManager.shared.scheduleReengagementReminders()
+            case .active:
+                NotificationManager.shared.cancelReengagementReminders()
+            default:
+                break
+            }
         }
     }
 }
