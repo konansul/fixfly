@@ -151,15 +151,15 @@ final class NotificationManager: NSObject, ObservableObject {
 
 extension NotificationManager: UNUserNotificationCenterDelegate {
 
-    /// Don't show a banner while the app is in the foreground — the in-app UI
-    /// already reflects generation progress/results, so a banner would just
-    /// duplicate it. (Return [.banner, .sound] here if you ever want it shown.)
+    /// Show notifications even while the app is in the foreground (banner +
+    /// sound + Notification Center), so coin/generation/re-engagement alerts are
+    /// visible without backgrounding the app.
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
-        completionHandler([])
+        completionHandler([.banner, .list, .sound])
     }
 
     /// Called when the user taps a notification. For a finished generation we
