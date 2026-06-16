@@ -50,16 +50,6 @@ struct SettingsView: View {
                         }
                     }
 
-                    // ⚠️ TEMPORARY (testing): fires a local notification in 5s to
-                    // verify the notification pipeline. Remove before release.
-                    settingsSection {
-                        Button {
-                            NotificationManager.shared.scheduleTestNotification(after: 5)
-                        } label: {
-                            settingsRow(title: "Send test notification (5s)", icon: "bell.badge")
-                        }
-                    }
-                    
                     settingsSection {
                         Button { openURL(LegalLinks.privacyPolicy.absoluteString) } label: {
                             settingsRow(title: "Privacy Policy", icon: "hand.raised")

@@ -8,6 +8,7 @@
 import SwiftUI
 import Combine
 import UserNotifications
+import UIKit
 
 enum PhotoNotificationStatus {
     case notDetermined
@@ -133,6 +134,22 @@ class PhotoProcessingViewModel: ObservableObject {
         Task { @MainActor in
             let granted = await NotificationManager.shared.requestAuthorization()
             self.notificationStatus = granted ? .authorized : .denied
+        }
+    }
+
+    /// Drives the "Notify Me When Ready" button. If the user hasn't decided yet,
+    /// ask. If they already denied (e.g. on the launch prompt), iOS won't show
+    /// the system dialog again — so send them to Settings to enable it.
+    func enableNotifications() {
+        switch notificationStatus {
+        case .authorized:
+            return
+        case .notDetermined:
+            requestNotificationPermission()
+        case .denied:
+            if let url = URL(string: UIApplication.openSettingsURLString) {
+                UIApplication.shared.open(url)
+            }
         }
     }
 }
