@@ -65,7 +65,6 @@ struct MainTabView: View {
                 .presentationBackground(.clear)
             }
         }
-        .signInGate(auth)
         .task {
             await auth.bootstrap()
             // Ask for notifications right after entering the app. On grant this

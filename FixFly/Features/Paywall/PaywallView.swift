@@ -75,11 +75,9 @@ struct PaywallView: View {
             } message: {
                 Text(vm.errorText ?? "")
             }
-            // Paywall is a fullScreenCover, so the tab-root gate can't appear
-            // above it — host the sign-in gate here too for the Buy action.
-            .signInGate()
-            // A guest who tapped Buy gets signed in, then the purchase resumes
-            // automatically — no need to tap Buy a second time.
+            // A guest who tapped Buy gets the native Sign in with Apple sheet,
+            // then the purchase resumes automatically — no second tap, no
+            // intermediate gate screen.
             .onChange(of: auth.user?.id) { _, newId in
                 if newId != nil, vm.resumePurchaseAfterSignIn {
                     vm.resumePurchaseAfterSignIn = false
