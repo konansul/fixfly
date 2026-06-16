@@ -98,15 +98,16 @@ struct PhotoProcessingView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 24)
                 
-                // Only offer the prompt while we can still ask. Once enabled
-                // (or denied) the button is hidden — no pointless "Unsubscribe".
-                if vm.notificationStatus == .notDetermined {
+                // Offer the prompt unless already enabled. If notifications were
+                // denied (e.g. on the launch prompt) the button deep-links to
+                // Settings, since iOS won't re-show the system dialog.
+                if vm.notificationStatus != .authorized {
                     Button {
-                        vm.requestNotificationPermission()
+                        vm.enableNotifications()
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "bell.badge.fill")
-                            Text("Notify Me When Ready")
+                            Text(vm.notificationStatus == .denied ? "Enable Notifications" : "Notify Me When Ready")
                         }
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(.black)
@@ -121,6 +122,7 @@ struct PhotoProcessingView: View {
             }
         }
         .onAppear {
+            vm.checkNotificationStatus()
             pulseState = true
             withAnimation(.linear(duration: 8.0).repeatForever(autoreverses: false)) {
                 rotationState = 360.0

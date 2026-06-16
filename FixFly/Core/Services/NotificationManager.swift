@@ -104,12 +104,10 @@ final class NotificationManager: NSObject, ObservableObject {
     /// background; they only ever fire if the user doesn't return (we cancel
     /// them on the next launch/foreground).
     ///
-    /// ⚠️ TEMPORARY (testing): fires after MINUTES so the reminders are visible.
-    /// Before release set `testingMinutes = false` to restore 3 and 7 days @18:00.
     func scheduleReengagementReminders() {
         cancelReengagementReminders()
 
-        let testingMinutes = true
+        let testingMinutes = false
 
         let reminders: [(id: String, days: Int, minutes: Int, title: String, body: String)] = [
             ("fixfly.reengage.3d", 3, 5, "We miss you 👋", "Your next AI masterpiece is one tap away — come create something new!"),
