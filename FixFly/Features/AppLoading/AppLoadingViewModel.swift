@@ -24,15 +24,17 @@ final class AppLoadingViewModel: ObservableObject {
     }
     
     func preload() async {
-        async let bootstrapTask: Void = {
-            await AuthStore.shared.bootstrap()
-        }()
+        // Gate the splash only on auth bootstrap — the lightweight work needed
+        // before the UI is usable. Media (preview images + videos) is warmed in
+        // the background and must NOT block the splash: on a weak connection
+        // downloading every preview took tens of seconds. Cards load their own
+        // media lazily (see RemoteCard), so the grid fills in as it arrives.
+        await AuthStore.shared.bootstrap()
 
-        async let homePreloadTask: Void = {
+        // Warm the media cache in the background; intentionally not awaited.
+        Task.detached(priority: .utility) {
             await HomePreloader.shared.preloadHomeContent()
-        }()
-
-        _ = await (bootstrapTask, homePreloadTask)
+        }
 
         // JWT is ready now — register any cached APNs token with the backend.
         await PushService.shared.syncIfPossible()

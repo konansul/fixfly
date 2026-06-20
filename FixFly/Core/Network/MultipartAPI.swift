@@ -20,7 +20,7 @@ final class MultipartAPI {
             requiresAuth: requiresAuth
         )
 
-        let (data, resp) = try await URLSession.shared.data(for: request)
+        let (data, resp) = try await NetworkSession.upload.data(for: request)
         guard let http = resp as? HTTPURLResponse else { throw ErrorAPI.badResponse }
 
         guard (200...299).contains(http.statusCode) else {
@@ -114,7 +114,7 @@ final class MultipartAPI {
         }
         
         for (index, image) in images.enumerated() {
-            if let jpeg = image.jpegData(compressionQuality: 0.9) {
+            if let jpeg = Self.uploadJPEG(from: image) {
                 body.append("--\(boundary)\r\n")
                 body.append("Content-Disposition: form-data; name=\"files\"; filename=\"photo\(index).jpg\"\r\n")
                 body.append("Content-Type: image/jpeg\r\n\r\n")
@@ -122,11 +122,11 @@ final class MultipartAPI {
                 body.append("\r\n")
             }
         }
-        
+
         body.append("--\(boundary)--\r\n")
         request.httpBody = body
-        
-        let (data, resp) = try await URLSession.shared.data(for: request)
+
+        let (data, resp) = try await NetworkSession.upload.data(for: request)
         guard let http = resp as? HTTPURLResponse else { throw ErrorAPI.badResponse }
         
         guard (200...299).contains(http.statusCode) else {
@@ -157,7 +157,7 @@ final class MultipartAPI {
             throw ErrorAPI.badURL
         }
 
-        guard let jpeg = image.jpegData(compressionQuality: 0.9) else {
+        guard let jpeg = Self.uploadJPEG(from: image) else {
             throw ErrorAPI.badResponse
         }
 
@@ -194,6 +194,19 @@ final class MultipartAPI {
         return request
     }
 
+    /// JPEG bytes for upload. Full-resolution camera/library photos are several
+    /// MB, which stalls uploads on a weak connection. The generation models
+    /// don't need more than ~1536px on the long edge, so we downscale first and
+    /// use a slightly lower quality — typically cutting the payload several-fold
+    /// with no visible loss in the result.
+    private static func uploadJPEG(
+        from image: UIImage,
+        maxDimension: CGFloat = 1536,
+        quality: CGFloat = 0.8
+    ) -> Data? {
+        image.downscaled(maxDimension: maxDimension).jpegData(compressionQuality: quality)
+    }
+
     private static func extractServerErrorMessage(from data: Data) -> String? {
         if
             let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -213,5 +226,25 @@ final class MultipartAPI {
 private extension Data {
     mutating func append(_ string: String) {
         self.append(string.data(using: .utf8)!)
+    }
+}
+
+private extension UIImage {
+    /// Returns a copy scaled so its longest edge is at most `maxDimension`
+    /// points (rendered at scale 1, so points == pixels). Smaller images are
+    /// returned unchanged. Used to shrink uploads.
+    func downscaled(maxDimension: CGFloat) -> UIImage {
+        let longest = max(size.width, size.height)
+        guard longest > maxDimension else { return self }
+
+        let ratio = maxDimension / longest
+        let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
+
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(size: newSize, format: format)
+        return renderer.image { _ in
+            draw(in: CGRect(origin: .zero, size: newSize))
+        }
     }
 }

@@ -12,6 +12,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        // Enlarge the shared URL cache before anything makes a request, so
+        // template previews persist across launches instead of re-downloading.
+        NetworkSession.configureSharedCache()
+
         FirebaseApp.configure()
         AppAnalytics.track(.appOpen)
 

@@ -13,7 +13,7 @@ final class HomeAPI {
 
     func fetchHome() async throws -> HomeResponse {
         try await ClientAPI.shared.get(
-            "/v1/home",
+            "/v1/home?seed=\(AppSession.seed)",
             requiresAuth: false
         )
     }
