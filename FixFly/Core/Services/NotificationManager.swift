@@ -36,8 +36,7 @@ final class NotificationManager: NSObject, ObservableObject {
         center.delegate = self
         Task {
             await refreshStatus()
-            // If already authorized, register for remote push so we get a fresh
-            // APNs token each launch (tokens can change).
+
             if status == .authorized {
                 print("[NotificationManager] calling registerForRemoteNotifications()")
                 UIApplication.shared.registerForRemoteNotifications()
@@ -45,7 +44,6 @@ final class NotificationManager: NSObject, ObservableObject {
         }
     }
 
-    /// Ask the user for permission. Returns whether it was granted.
     @discardableResult
     func requestAuthorization() async -> Bool {
         do {
@@ -63,9 +61,6 @@ final class NotificationManager: NSObject, ObservableObject {
         }
     }
 
-    /// Fire a local notification a few seconds from now — purely to verify the
-    /// permission + delivery pipeline. Background the app to see the banner,
-    /// or stay in the app (it still shows, thanks to the delegate below).
     func scheduleTestNotification(after seconds: TimeInterval = 5) {
         let content = UNMutableNotificationContent()
         content.title = "FixFly"
@@ -96,18 +91,11 @@ final class NotificationManager: NSObject, ObservableObject {
         }
     }
 
-    // MARK: - Re-engagement reminders ("we miss you")
-
     private static let reengageIDs = ["fixfly.reengage.3d", "fixfly.reengage.7d"]
 
-    /// Schedule local "come back" reminders. Call when the app goes to
-    /// background; they only ever fire if the user doesn't return (we cancel
-    /// them on the next launch/foreground).
-    ///
     func scheduleReengagementReminders() {
         cancelReengagementReminders()
-
-        let testingMinutes = false
+        let testingMinutes = ProcessInfo.processInfo.arguments.contains("reminders-in-minutes")
 
         let reminders: [(id: String, days: Int, minutes: Int, title: String, body: String)] = [
             ("fixfly.reengage.3d", 3, 5, "We miss you 👋", "Your next AI masterpiece is one tap away — come create something new!"),
@@ -139,19 +127,13 @@ final class NotificationManager: NSObject, ObservableObject {
         }
     }
 
-    /// Cancel pending re-engagement reminders — call when the user returns.
     func cancelReengagementReminders() {
         center.removePendingNotificationRequests(withIdentifiers: Self.reengageIDs)
     }
 }
 
-// MARK: - UNUserNotificationCenterDelegate
-
 extension NotificationManager: UNUserNotificationCenterDelegate {
 
-    /// Show notifications even while the app is in the foreground (banner +
-    /// sound + Notification Center), so coin/generation/re-engagement alerts are
-    /// visible without backgrounding the app.
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
@@ -160,8 +142,6 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
         completionHandler([.banner, .list, .sound])
     }
 
-    /// Called when the user taps a notification. For a finished generation we
-    /// deep-link to its result via DeepLinkRouter.
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
