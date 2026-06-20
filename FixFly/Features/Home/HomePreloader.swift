@@ -69,8 +69,6 @@ final class HomePreloader {
                     if let poster = item.posterUrl, let posterURL = URL(string: poster) {
                         images.append(posterURL)
                     }
-                default:
-                    break
                 }
             }
         }
