@@ -13,9 +13,9 @@ enum ConfigAPI {
 
     static let baseURL = "https://fixfly-d9hmdbajfbgkfrh2.canadacentral-01.azurewebsites.net"
 
-    /// Numeric App Store Apple ID (App Store Connect → App Information).
     static let appStoreID = "6777982481"
 
-    /// Public App Store page — used by Rate Us / Share App.
     static let appStoreURL = "https://apps.apple.com/app/id\(appStoreID)"
+
+    static let tikTokURL: String? = "https://www.tiktok.com/@fixfly.ai"
 }
