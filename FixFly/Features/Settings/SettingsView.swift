@@ -44,9 +44,11 @@ struct SettingsView: View {
                         }
                     }
                     
-                    settingsSection {
-                        Button { openURL("https://tiktok.com/@fixfly") } label: {
-                            settingsRow(title: "Follow us on TikTok", icon: "music.note")
+                    if let tikTokURL = ConfigAPI.tikTokURL {
+                        settingsSection {
+                            Button { openURL(tikTokURL) } label: {
+                                settingsRow(title: "Follow us on TikTok", icon: "music.note")
+                            }
                         }
                     }
 
