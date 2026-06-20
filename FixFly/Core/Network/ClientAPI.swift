@@ -65,7 +65,7 @@ final class ClientAPI {
             req.httpBody = try JSONSerialization.data(withJSONObject: jsonBody)
         }
 
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await NetworkSession.api.data(for: req)
 
         guard let http = resp as? HTTPURLResponse else {
             throw ErrorAPI.badResponse

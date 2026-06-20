@@ -119,7 +119,7 @@ struct LibraryView: View {
     }
 
     private func loadLibraryData() async {
-        guard let url = URL(string: ConfigAPI.baseURL + "/v1/library") else { return }
+        guard let url = URL(string: ConfigAPI.baseURL + "/v1/library?seed=\(AppSession.seed)") else { return }
         var request = URLRequest(url: url)
         if let token = TokenStore.shared.accessToken {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
