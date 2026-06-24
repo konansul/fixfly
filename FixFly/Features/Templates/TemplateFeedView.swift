@@ -299,15 +299,15 @@ struct TemplateFeedView: View {
             HStack(spacing: 10) {
                 badge(icon: template.actualResultType == .video ? "video" : "photo",
                       text: template.actualResultType == .video ? "1 video" : "1 photo")
-                
-                if template.actualResultType == .video {
-                    badge(icon: isMuted ? "speaker.slash.fill" : "speaker.wave.2",
-                          text: isMuted ? "Muted" : "With sound")
-                }
-                
+
                 badge(icon: "bitcoinsign.circle.fill",
                       text: template.actualResultType == .video ? "600 coins" : "150 coins",
                       iconColor: .yellow)
+
+                // Which Google model processes this generation — tap for the full
+                // data-use disclosure. Sits in the metadata row so the main button
+                // stays anchored at the bottom.
+                AIDisclosureFootnote(model: template.actualResultType == .video ? "Veo" : "Gemini")
             }
             .id(template.id.appending("_badges"))
 

@@ -32,15 +32,21 @@ struct PaywallView: View {
                 )
                 .ignoresSafeArea()
 
-                VStack(spacing: 0) {
-                    Spacer()
-
-                    content
-                        .padding(.horizontal, 18)
-                        .padding(.top, 18)
+                GeometryReader { geo in
+                    ScrollView(showsIndicators: false) {
+                        content
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 18)
+                            .frame(maxWidth: 520)
+                            .frame(
+                                maxWidth: .infinity,
+                                minHeight: geo.size.height,
+                                alignment: .bottom
+                            )
+                    }
                 }
             }
-            // Native toolbar X on the left — same as WalletCoinsSheetView.
+            
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)

@@ -6,6 +6,7 @@ struct SettingsView: View {
     @State private var restoreMessage: String?
     @State private var showDeleteConfirm = false
     @State private var isDeleting = false
+    @State private var showAIDisclosure = false
     
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -53,6 +54,10 @@ struct SettingsView: View {
                     }
 
                     settingsSection {
+                        Button { showAIDisclosure = true } label: {
+                            settingsRow(title: "AI & Your Data", icon: "sparkles")
+                        }
+
                         Button { openURL(LegalLinks.privacyPolicy.absoluteString) } label: {
                             settingsRow(title: "Privacy Policy", icon: "hand.raised")
                         }
@@ -106,6 +111,9 @@ struct SettingsView: View {
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showAIDisclosure) {
+            AIDataDisclosureView()
+        }
         .alert("Restore Purchases", isPresented: Binding(
             get: { restoreMessage != nil },
             set: { if !$0 { restoreMessage = nil } }
