@@ -3,6 +3,7 @@ import SwiftUI
 struct CoinsWalletSheetView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var store = WalletSheetStore()
+    @ObservedObject private var auth = AuthStore.shared
     @State private var coinRotation: Double = 0
 
     var body: some View {
@@ -16,20 +17,26 @@ struct CoinsWalletSheetView: View {
                     VStack(spacing: 0) {
                         ScrollView(showsIndicators: false) {
                             VStack(spacing: 10) {
-                                balanceHero
-
-                                if let errorText = store.errorText {
-                                    // 1. Если есть ошибка — показываем только её
-                                    errorCard(errorText)
-                                } else if store.isLoading && store.items.isEmpty {
-                                    // 2. Если ошибки нет и идет загрузка — показываем лоадер
-                                    loadingBlock
-                                } else if store.items.isEmpty {
-                                    // 3. Если загрузка завершена, ошибок нет, но список пуст — показываем "No transactions"
-                                    emptyBlock
+                                if !auth.isAuthed {
+                                    // Guest: don't call the wallet API (it would 401) —
+                                    // show a friendly sign-in prompt instead of a raw error.
+                                    signedOutBlock
                                 } else {
-                                    // 4. Во всех остальных случаях показываем список
-                                    ledgerSection
+                                    balanceHero
+
+                                    if let errorText = store.errorText {
+                                        // 1. Если есть ошибка — показываем только её
+                                        errorCard(errorText)
+                                    } else if store.isLoading && store.items.isEmpty {
+                                        // 2. Если ошибки нет и идет загрузка — показываем лоадер
+                                        loadingBlock
+                                    } else if store.items.isEmpty {
+                                        // 3. Если загрузка завершена, ошибок нет, но список пуст — показываем "No transactions"
+                                        emptyBlock
+                                    } else {
+                                        // 4. Во всех остальных случаях показываем список
+                                        ledgerSection
+                                    }
                                 }
                             }
                             .padding(.horizontal, 16)
@@ -37,7 +44,7 @@ struct CoinsWalletSheetView: View {
                             .padding(.bottom, 28)
                         }
                         .refreshable {
-                            Task { await store.load() }
+                            if auth.isAuthed { await store.load() }
                         }
                     }
                 }
@@ -58,7 +65,11 @@ struct CoinsWalletSheetView: View {
                     
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
-                            Task { await store.load() }
+                            if auth.isAuthed {
+                                Task { await store.load() }
+                            } else {
+                                auth.requireSignIn()
+                            }
                         } label: {
                             Image(systemName: "arrow.clockwise")
                                 .font(.system(size: 14, weight: .bold))
@@ -68,7 +79,11 @@ struct CoinsWalletSheetView: View {
                 }
                 .task {
                     startCoinAnimation()
-                    await store.load()
+                    if auth.isAuthed { await store.load() }
+                }
+                // After the guest signs in, load the wallet automatically.
+                .onChange(of: auth.user?.id) { _, newId in
+                    if newId != nil { Task { await store.load() } }
                 }
             }
     }
@@ -172,6 +187,50 @@ struct CoinsWalletSheetView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color.white.opacity(0.06))
+        )
+    }
+
+    private var signedOutBlock: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "person.crop.circle.badge.questionmark")
+                .font(.system(size: 40))
+                .foregroundStyle(.white.opacity(0.85))
+
+            Text("You're not signed in")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundStyle(.white)
+
+            Text("Sign in to see your coin balance and transaction history.")
+                .font(.system(size: 14))
+                .foregroundStyle(.white.opacity(0.75))
+                .multilineTextAlignment(.center)
+
+            Button {
+                auth.requireSignIn()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "applelogo")
+                        .font(.system(size: 15, weight: .semibold))
+                    Text("Sign in with Apple")
+                        .font(.system(size: 15, weight: .semibold))
+                }
+                .foregroundStyle(.black)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(Color.white)
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 4)
+            .disabled(auth.isLoading)
+            .opacity(auth.isLoading ? 0.5 : 1)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(24)
+        .padding(.top, 20)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(Color.white.opacity(0.06))
