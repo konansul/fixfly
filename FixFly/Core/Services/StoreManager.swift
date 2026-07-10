@@ -31,6 +31,10 @@ final class StoreManager: ObservableObject {
     @Published private(set) var isReady: Bool = false
     @Published private(set) var loadError: String?
 
+    /// The last transaction StoreKit verified for us. Analytics reports it so
+    /// Firebase can de-duplicate a purchase event the user triggers twice.
+    private(set) var lastTransactionId: String?
+
     var weeklyDisplayPrice: String? { weekly?.displayPrice }
     var monthlyDisplayPrice: String? { monthly?.displayPrice }
 
@@ -111,6 +115,7 @@ final class StoreManager: ObservableObject {
         case .success(let verification):
             let transaction = try verification.payloadValue
             try await applyTransactionToBackend(transaction, jws: verification.jwsRepresentation)
+            lastTransactionId = String(transaction.id)
             await transaction.finish()
 
         case .userCancelled:

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  The app's own privacy manifest. Each third-party SDK ships its own, and Apple
+	  aggregates them all into the App Store privacy report; this file covers only
+	  what FixFly's first-party code does.
+
+	  NSPrivacyTracking is true: with the TikTok Business SDK integrated the app
+	  measures which ads bring users in, which is tracking under ATT.
+
+	  NSPrivacyTrackingDomains: the TikTok Business SDK ships an EMPTY privacy
+	  manifest — it declares neither tracking nor its endpoints — so the domain it
+	  posts to must be listed here, or iOS won't block it when the user denies ATT.
+	  The host is read straight from the SDK source (TikTokRequestHandler.m: every
+	  request goes to `analytics.us.tiktok.com`), not guessed. FixFly's own code
+	  talks only to its backend, Firebase and APNs, which are not tracking domains.
+
+	  UserDefaults is a required-reason API: TokenStore, PushService and several
+	  @AppStorage flags read and write it. CA92.1 = "accessed only to read and
+	  write data belonging to this app itself".
+	-->
+	<key>NSPrivacyTracking</key>
+	<true/>
+
+	<key>NSPrivacyTrackingDomains</key>
+	<array>
+		<string>analytics.us.tiktok.com</string>
+	</array>
+
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

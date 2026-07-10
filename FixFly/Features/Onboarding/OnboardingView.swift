@@ -12,6 +12,7 @@ struct OnboardingView: View {
     var onFinish: () -> Void
 
     @ObservedObject private var auth = AuthStore.shared
+    @ObservedObject private var config = AppConfigStore.shared
 
     @State private var page = 0
 
@@ -51,17 +52,25 @@ struct OnboardingView: View {
                     ).tag(0)
 
                     textBlock(
-                        title: "Hundreds of styles and templates",
-                        subtitle: "Pick a look, add your photo, and let AI do the magic."
+                        title: "Viral trends, dances and more",
+                        subtitle: "Make your face dance, hit the trends, and try hundreds of styles — just add your photo."
                     ).tag(1)
 
-                    textBlock(
-                        title: "Save your creations",
-                        subtitle: "Sign in with Apple to keep your coins and creations across all your devices."
-                    ).tag(2)
+                    Group {
+                        if config.signupBonusCoins > 0 {
+                            bonusBlock(coins: config.signupBonusCoins)
+                        } else {
+                            // Bonus disabled on the backend — fall back to the
+                            // original, reward-free copy.
+                            textBlock(
+                                title: "Save your creations",
+                                subtitle: "Sign in with Apple to keep your coins and creations across all your devices."
+                            )
+                        }
+                    }.tag(2)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
-                .frame(height: 220)
+                .frame(height: 250)
                 .animation(.easeInOut, value: page)
 
                 dots
@@ -81,6 +90,37 @@ struct OnboardingView: View {
                 .font(.system(size: 28, weight: .bold))
                 .foregroundStyle(.white)
             Text(subtitle)
+                .font(.system(size: 16, weight: .regular))
+                .foregroundStyle(.white.opacity(0.75))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, 32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+    }
+
+    /// Final page — leads with the reward so guests actually know signing in is
+    /// worth it (the old copy only mentioned "keep your coins").
+    private func bonusBlock(coins: Int) -> some View {
+        VStack(spacing: 14) {
+            HStack(spacing: 7) {
+                Image(systemName: "gift.fill")
+                    .font(.system(size: 13, weight: .bold))
+                Text("\(coins) FREE COINS")
+                    .font(.system(size: 13, weight: .heavy))
+                    .tracking(0.5)
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Capsule().fill(FixFlyGradient.linear))
+            .shadow(color: FixFlyGradient.accent.opacity(0.5), radius: 12)
+
+            Text("Sign in and get \(coins) free coins")
+                .font(.system(size: 28, weight: .bold))
+                .foregroundStyle(.white)
+
+            Text("Enough to create your first AI photo — on us. Your coins and creations stay saved across all your devices.")
                 .font(.system(size: 16, weight: .regular))
                 .foregroundStyle(.white.opacity(0.75))
                 .fixedSize(horizontal: false, vertical: true)

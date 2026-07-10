@@ -181,13 +181,23 @@ struct MyGenerationsView: View {
             HStack(spacing: 12) {
                 profileAvatar
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(auth.user?.fullName?.isEmpty == false ? auth.user!.fullName! : "Your Account")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.white)
-                    Text(email)
-                        .font(.system(size: 13))
-                        .foregroundStyle(.white.opacity(0.6))
-                        .lineLimit(1)
+                    // Apple only hands over a name if the user chose to share it, so
+                    // most accounts have none. Rather than fill the line with a
+                    // "Your Account" placeholder, the email takes its place.
+                    if let name = auth.user?.fullName, !name.isEmpty {
+                        Text(name)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white)
+                        Text(email)
+                            .font(.system(size: 13))
+                            .foregroundStyle(.white.opacity(0.6))
+                            .lineLimit(1)
+                    } else {
+                        Text(email)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                    }
                 }
                 Spacer()
                 Image(systemName: "checkmark.seal.fill")
@@ -263,9 +273,11 @@ struct MyGenerationsView: View {
                 .font(.system(size: 30, weight: .bold))
                 .foregroundStyle(.white)
 
-            Text("All your processed images in one place. Please, save your recent generations, they expire in 14 days.")
-                .font(.system(size: 13, weight: .light))
-                .foregroundStyle(.white.opacity(0.78))
+            // Same type as GenerateView's "What do you want to create today?" —
+            // the two screens sit next to each other in the tab bar.
+            Text("All your processed images in one place. Please, save your generations, they expire in 14 days.")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(.white.opacity(0.75))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)

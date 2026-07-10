@@ -10,25 +10,61 @@
 
 import SwiftUI
 
-/// Compact, tappable chip shown next to a generation action: the Google logo +
-/// the model that processes the request ("Google Gemini" for images, "Google
-/// Veo" for video). Tapping opens the full disclosure. Self-contained (owns its
-/// sheet state) so screens can drop it in without extra wiring.
+/// Who actually processes a generation. Not every template goes to Google: the
+/// motion-control dances are sent to Kling (Kuaishou, China), and saying "Google
+/// Veo" over one of those would be a false disclosure.
+enum AIProvider: String {
+    case gemini
+    case veo
+    case kling
+
+    var isGoogle: Bool { self != .kling }
+
+    /// What the chip reads.
+    var label: String {
+        switch self {
+        case .gemini: return "Google Gemini"
+        case .veo:    return "Google Veo"
+        case .kling:  return "Kling AI"
+        }
+    }
+
+    /// Who receives the photo, for the "Who processes it" card.
+    var processorText: String {
+        switch self {
+        case .gemini:
+            return "Google Cloud (Vertex AI). Your photo and prompt are processed by Google's Gemini image model."
+        case .veo:
+            return "Google Cloud (Vertex AI). Your photo and prompt are processed by Google's Veo video model."
+        case .kling:
+            return "Kling AI, operated by Kuaishou Technology. This template copies a dancer's movement onto your photo, which only Kling can do, so your photo is processed on their servers rather than Google's."
+        }
+    }
+}
+
+/// Compact, tappable chip shown next to a generation action: the provider's mark +
+/// the model that processes the request. Tapping opens the full disclosure.
+/// Self-contained (owns its sheet state) so screens can drop it in without wiring.
 struct AIDisclosureFootnote: View {
-    /// The Google model used for this generation, e.g. "Gemini" or "Veo".
-    var model: String
+    var provider: AIProvider
     @State private var show = false
 
     var body: some View {
         Button { show = true } label: {
             HStack(spacing: 5) {
-                Image("ic_google")
-                    .resizable()
-                    .renderingMode(.original)
-                    .scaledToFit()
-                    .frame(width: 13, height: 13)
+                if provider.isGoogle {
+                    Image("ic_google")
+                        .resizable()
+                        .renderingMode(.original)
+                        .scaledToFit()
+                        .frame(width: 13, height: 13)
+                } else {
+                    Image(systemName: "cpu")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
 
-                Text("Google \(model)")
+                Text(provider.label)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.white)
 
@@ -43,12 +79,14 @@ struct AIDisclosureFootnote: View {
         }
         .buttonStyle(.plain)
         .sheet(isPresented: $show) {
-            AIDataDisclosureView()
+            AIDataDisclosureView(provider: provider)
         }
     }
 }
 
 struct AIDataDisclosureView: View {
+    /// Settings opens this with no template in hand; Gemini is the common case.
+    var provider: AIProvider = .gemini
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -72,13 +110,13 @@ struct AIDataDisclosureView: View {
                         card(
                             icon: "cpu",
                             title: "Who processes it",
-                            text: "Google Cloud (Vertex AI) — the only third-party AI provider we use. Images are generated with Google's Gemini model and videos with Google's Veo model."
+                            text: provider.processorText
                         )
 
                         card(
                             icon: "lock.shield",
                             title: "What we don't send",
-                            text: "No account or identity data — no name, email, Apple ID or device identifiers are sent to Google."
+                            text: "No account or identity data — no name, email, Apple ID or device identifiers are sent to \(provider.isGoogle ? "Google" : "Kling")."
                         )
 
                         card(

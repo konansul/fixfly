@@ -17,6 +17,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         NetworkSession.configureSharedCache()
 
         FirebaseApp.configure()
+
+        // TikTok Business SDK — auto-tracks install/launch and receives the
+        // funnel events forwarded from AppAnalytics. No-op until the SPM package
+        // and the TikTok ids are set (see TikTokAnalytics).
+        TikTokAnalytics.initialize()
+
         AppAnalytics.track(.appOpen)
 
         // Set the notification delegate early so foreground notifications show
@@ -49,6 +55,9 @@ struct FixFlyApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @Environment(\.scenePhase) private var scenePhase
 
+    // Apple's ATT prompt must be shown once, while the app is active.
+    @State private var didRequestTracking = false
+
     var body: some Scene {
         WindowGroup {
             AppLoadingView()
@@ -63,6 +72,12 @@ struct FixFlyApp: App {
                 NotificationManager.shared.scheduleReengagementReminders()
             case .active:
                 NotificationManager.shared.cancelReengagementReminders()
+                // Ask for tracking permission on the first active state — required
+                // before the TikTok SDK can access IDFA for ad attribution.
+                if !didRequestTracking {
+                    didRequestTracking = true
+                    TikTokAnalytics.requestTrackingAuthorization()
+                }
             default:
                 break
             }

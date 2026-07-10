@@ -32,9 +32,14 @@ struct FeedNavigationData: Identifiable, Hashable {
 
 struct HomeView: View {
     @StateObject private var vm = HomeViewModel()
+    @ObservedObject private var auth = AuthStore.shared
+    @ObservedObject private var config = AppConfigStore.shared
     @State private var selectedTabBySection: [String: String] = [:]
     @State private var showPaywall = false
-    
+
+    // Persistent guest reminder about the free signup coins; dismissible.
+    @AppStorage("guest_home_banner_dismissed") private var guestBannerDismissed = false
+
     @State private var selectedGridData: SectionGridData?
     @State private var feedNavData: FeedNavigationData?
 
@@ -87,6 +92,18 @@ struct HomeView: View {
                 }
             }
             .ignoresSafeArea()
+            .safeAreaInset(edge: .bottom) {
+                if !auth.isAuthed, !guestBannerDismissed, config.signupBonusCoins > 0 {
+                    GuestBonusBanner(
+                        coins: config.signupBonusCoins,
+                        onTap: { auth.requireSignIn() },
+                        onDismiss: { withAnimation { guestBannerDismissed = true } }
+                    )
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 6)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
             .task { await vm.load() }
             .refreshable { await vm.load() }
             .navigationDestination(item: $selectedGridData) { data in

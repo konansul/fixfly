@@ -31,6 +31,11 @@ final class AppLoadingViewModel: ObservableObject {
         // media lazily (see RemoteCard), so the grid fills in as it arrives.
         await AuthStore.shared.bootstrap()
 
+        // Pull public config (signup bonus amount) so onboarding / guest screens
+        // advertise the real number. The UI has a 200 fallback, so this must NOT
+        // block the splash — fire and forget.
+        Task { await AppConfigStore.shared.refresh() }
+
         // Warm the media cache in the background; intentionally not awaited.
         Task.detached(priority: .utility) {
             await HomePreloader.shared.preloadHomeContent()

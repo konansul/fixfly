@@ -4,6 +4,7 @@ struct CoinsWalletSheetView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var store = WalletSheetStore()
     @ObservedObject private var auth = AuthStore.shared
+    @ObservedObject private var config = AppConfigStore.shared
     @State private var coinRotation: Double = 0
 
     var body: some View {
@@ -194,16 +195,39 @@ struct CoinsWalletSheetView: View {
     }
 
     private var signedOutBlock: some View {
-        VStack(spacing: 14) {
-            Image(systemName: "person.crop.circle.badge.questionmark")
-                .font(.system(size: 40))
-                .foregroundStyle(.white.opacity(0.85))
+        // Whether the backend is currently granting a signup bonus. When it is,
+        // lead with the reward — the old copy only offered to "see your balance",
+        // which is no reason to sign in.
+        let bonus = config.signupBonusCoins
 
-            Text("You're not signed in")
+        return VStack(spacing: 14) {
+            if bonus > 0 {
+                HStack(spacing: 7) {
+                    Image(systemName: "gift.fill")
+                        .font(.system(size: 13, weight: .bold))
+                    Text("\(bonus) FREE COINS")
+                        .font(.system(size: 13, weight: .heavy))
+                        .tracking(0.5)
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(Capsule().fill(FixFlyGradient.linear))
+                .shadow(color: FixFlyGradient.accent.opacity(0.5), radius: 12)
+            } else {
+                Image(systemName: "person.crop.circle.badge.questionmark")
+                    .font(.system(size: 40))
+                    .foregroundStyle(.white.opacity(0.85))
+            }
+
+            Text(bonus > 0 ? "Sign in and get \(bonus) free coins" : "You're not signed in")
                 .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
 
-            Text("Sign in to see your coin balance and transaction history.")
+            Text(bonus > 0
+                 ? "Enough to create your first AI photo — on us. Your coins and history stay saved across all your devices."
+                 : "Sign in to see your coin balance and transaction history.")
                 .font(.system(size: 14))
                 .foregroundStyle(.white.opacity(0.75))
                 .multilineTextAlignment(.center)

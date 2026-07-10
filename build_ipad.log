@@ -1,0 +1,33 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project FixFly.xcodeproj -scheme FixFly -configuration Debug -destination "platform=iOS Simulator,id=A7592A50-D052-4949-A218-AE09BFDA0BE3" -derivedDataPath ./build CODE_SIGNING_ALLOWED=NO build
+
+Build settings from command line:
+    CODE_SIGNING_ALLOWED = NO
+
+Resolve Package Graph
+
+
+Resolved source packages:
+  abseil: https://github.com/google/abseil-cpp-binary.git @ 1.2024072200.0
+  GoogleDataTransport: https://github.com/google/GoogleDataTransport.git @ 10.1.0
+  leveldb: https://github.com/firebase/leveldb.git @ 1.22.5
+  gRPC: https://github.com/google/grpc-binary.git @ 1.69.1
+  GoogleAppMeasurement: https://github.com/google/GoogleAppMeasurement.git @ 12.14.0
+  Promises: https://github.com/google/promises.git @ 2.4.0
+  KeychainAccess: https://github.com/kishikawakatsumi/KeychainAccess @ master (e0c7eeb)
+  Kingfisher: https://github.com/onevcat/Kingfisher.git @ 8.8.0
+  Firebase: https://github.com/firebase/firebase-ios-sdk @ 12.14.0
+  InteropForGoogle: https://github.com/google/interop-ios-for-google-sdks.git @ 101.0.0
+  GTMSessionFetcher: https://github.com/google/gtm-session-fetcher.git @ 3.5.0
+  GoogleUtilities: https://github.com/google/GoogleUtilities.git @ 8.1.0
+  GoogleAdsOnDeviceConversion: https://github.com/googleads/google-ads-on-device-conversion-ios-sdk @ 3.6.0
+  AppCheck: https://github.com/google/app-check.git @ 11.2.0
+  nanopb: https://github.com/firebase/nanopb.git @ 2.30910.1
+
+2026-06-24 18:58:46.872 xcodebuild[8740:156042] Writing error result bundle to /var/folders/xl/gw34n52d6vdd73ntqx05njm40000gn/T/ResultBundle_2026-24-06_18-58-0046.xcresult
+xcodebuild: error: Unable to find a destination matching the provided destination specifier:
+		{ platform:iOS Simulator, id:A7592A50-D052-4949-A218-AE09BFDA0BE3 }
+
+	Ineligible destinations for the "FixFly" scheme:
+		{ platform:iOS, arch:arm64e, id:00008120-000E550430834032, name:Kanan’s iPhone, error:iOS 26.5 is not installed. Please download and install the platform from Xcode > Settings > Components. }
+		{ platform:iOS, id:dvtdevice-DVTiPhonePlaceholder-iphoneos:placeholder, name:Any iOS Device, error:iOS 26.5 is not installed. Please download and install the platform from Xcode > Settings > Components. }

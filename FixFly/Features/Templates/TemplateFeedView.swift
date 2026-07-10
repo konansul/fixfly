@@ -8,6 +8,15 @@ struct TemplateFeedView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var showPhotoPicker = false
+    /// Motion-control templates explain the photo rules before the picker opens.
+    @State private var showFullBodySheet = false
+    /// Set by Continue; read once the tips sheet has actually gone away.
+    @State private var pickerAfterTips = false
+    /// Country (or other variant) chosen per template id, since the feed pages
+    /// between templates and each keeps its own selection.
+    @State private var selectedVariantByTemplate: [String: String] = [:]
+    /// Text the user typed for a template's `inputs` (e.g. the banner slogan).
+    @State private var inputTextByTemplate: [String: String] = [:]
 
     @State private var selectedImage: UIImage?
     @State private var finalResultImageUrl: String?
@@ -123,6 +132,16 @@ struct TemplateFeedView: View {
                 Task { await startGeneration(image) }
             }
             .ignoresSafeArea()
+        }
+        // The picker opens only once this sheet has finished dismissing. Presenting
+        // it from inside Continue races the dismissal and SwiftUI silently drops it.
+        .sheet(isPresented: $showFullBodySheet, onDismiss: {
+            if pickerAfterTips {
+                pickerAfterTips = false
+                showPhotoPicker = true
+            }
+        }) {
+            FullBodyPhotoSheet { pickerAfterTips = true }
         }
         .sheet(item: $processingTaskId) { taskId in
             PhotoProcessingView(taskId: taskId, onComplete: { outputUrl in
@@ -304,16 +323,35 @@ struct TemplateFeedView: View {
                       text: template.actualResultType == .video ? "600 coins" : "150 coins",
                       iconColor: .yellow)
 
-                // Which Google model processes this generation — tap for the full
+                // Which provider processes this generation — tap for the full
                 // data-use disclosure. Sits in the metadata row so the main button
-                // stays anchored at the bottom.
-                AIDisclosureFootnote(model: template.actualResultType == .video ? "Veo" : "Gemini")
+                // stays anchored at the bottom. The dances go to Kling, not Google,
+                // so the provider comes from the payload rather than the media type.
+                AIDisclosureFootnote(provider: template.provider)
             }
             .id(template.id.appending("_badges"))
 
+            // Parametrised template (e.g. Fan Cam): choose the country first, then
+            // the photo picker opens. Templates without variants show nothing here.
+            if let variants = template.variants, !variants.isEmpty {
+                variantPicker(for: template, variants: variants)
+                    .id(template.id.appending("_variants"))
+            }
+
+            // Free text the user puts into the scene (e.g. the flag in Skyline Dare).
+            if let input = template.inputs?.first {
+                inputField(for: template, input: input)
+                    .id(template.id.appending("_input"))
+            }
+
             Button {
-                // Сразу открываем пикер, без промежуточного окна
-                showPhotoPicker = true
+                // Dance templates explain the photo rules first; everything else
+                // goes straight to the picker.
+                if template.needsFullBodyPhoto {
+                    showFullBodySheet = true
+                } else {
+                    showPhotoPicker = true
+                }
             } label: {
                 Text(template.actualResultType == .video ? "Create Video" : "Create Photo")
                     .font(.system(size: 18, weight: .bold))
@@ -328,6 +366,101 @@ struct TemplateFeedView: View {
             .id(template.id.appending("_btn"))
         }
         .padding(.bottom, 30)
+    }
+
+    /// Horizontal row of flag chips. Selection is kept per template id, because the
+    /// feed pages between templates and each keeps its own choice.
+    private func variantPicker(for template: RemoteCardItem, variants: [TemplateVariant]) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(variants) { variant in
+                    let isSelected = resolvedVariant(for: template)?.id == variant.id
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        selectedVariantByTemplate[template.id] = variant.id
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text(variant.flag).font(.system(size: 16))
+                            Text(variant.title)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.white)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background {
+                            if isSelected {
+                                Capsule().fill(FixFlyGradient.linear)
+                            } else {
+                                Capsule().fill(Color.white.opacity(0.12))
+                            }
+                        }
+                        .overlay(
+                            Capsule().stroke(Color.white.opacity(isSelected ? 0.5 : 0), lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 20)
+        }
+        .animation(.easeInOut(duration: 0.15), value: selectedVariantByTemplate[template.id])
+    }
+
+    /// Short text field, capped at the length the backend advertises. Longer
+    /// slogans come out of the image model as smeared letters, so the cap is real,
+    /// not decorative.
+    private func inputField(for template: RemoteCardItem, input: TemplateInput) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(input.label.uppercased())
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.white.opacity(0.55))
+                .tracking(0.6)
+
+            TextField(
+                "",
+                text: Binding(
+                    get: { inputTextByTemplate[template.id] ?? "" },
+                    set: { inputTextByTemplate[template.id] = String($0.prefix(input.maxLength)) }
+                ),
+                prompt: Text(input.placeholder).foregroundStyle(.white.opacity(0.35))
+            )
+            .font(.system(size: 17, weight: .bold))
+            .foregroundStyle(.white)
+            .textInputAutocapitalization(.characters)
+            .autocorrectionDisabled()
+            .submitLabel(.done)
+            .padding(.horizontal, 14)
+            .frame(height: 46)
+            .background(Color.white.opacity(0.12))
+            .clipShape(Capsule())
+            .overlay(Capsule().stroke(Color.white.opacity(0.18), lineWidth: 1))
+        }
+        .padding(.horizontal, 20)
+    }
+
+    /// The text to drop into the template's `{KEY}` placeholder, falling back to the
+    /// backend's own default when the user typed nothing.
+    private func resolvedStillPrompt(for template: RemoteCardItem) -> String? {
+        guard let templated = template.stillPromptTemplate,
+              let input = template.inputs?.first else { return template.stillPrompt }
+
+        let typed = (inputTextByTemplate[template.id] ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !typed.isEmpty else { return template.stillPrompt }
+
+        let text = String(typed.prefix(input.maxLength)).uppercased()
+        return templated.replacingOccurrences(of: "{\(input.key)}", with: text)
+    }
+
+    /// The chosen variant, defaulting to the first one so a generation can always
+    /// start without an explicit tap.
+    private func resolvedVariant(for template: RemoteCardItem) -> TemplateVariant? {
+        guard let variants = template.variants, !variants.isEmpty else { return nil }
+        if let id = selectedVariantByTemplate[template.id],
+           let match = variants.first(where: { $0.id == id }) {
+            return match
+        }
+        return variants.first
     }
 
     private func badge(icon: String, text: String, iconColor: Color = .white) -> some View {
@@ -361,12 +494,31 @@ struct TemplateFeedView: View {
         let path = isVideo ? "/v1/generate-veo-video" : "/v1/generate-nano-banana"
         
         var extra: [String: String] = [:]
-        extra["prompt"] = template.prompt ?? "Animate this photo beautifully"
+        // A parametrised template (e.g. the picked country) carries its own prompt.
+        let variant = await MainActor.run { resolvedVariant(for: template) }
+        extra["prompt"] = variant?.prompt ?? template.prompt ?? "Animate this photo beautifully"
         extra["style"] = template.styleId ?? "None"
-        
+
+        // Either picked in the card (Fan Cam's country) or baked into it (a dance's
+        // driving clip). The backend resolves the clip from this id, never from a
+        // URL the client could supply.
+        if let variantId = variant?.id ?? template.variant {
+            extra["variant"] = variantId
+        }
+
+        // Two-step template: the backend draws this frame first, then animates it.
+        // Ordinary templates send nothing and stay one-step.
+        if let still = await MainActor.run(body: { resolvedStillPrompt(for: template) }) {
+            extra["still_prompt"] = still
+        }
+
         let ratio = input.size.width / input.size.height
-        
-        if isVideo {
+
+        if let forced = template.forceAspectRatio {
+            // The scene is composed for this ratio, so a landscape upload must not
+            // drag the result sideways.
+            extra["aspect_ratio"] = forced
+        } else if isVideo {
             extra["aspect_ratio"] = ratio > 1.0 ? "16:9" : "9:16"
         } else {
             if ratio >= 1.5 { extra["aspect_ratio"] = "16:9" }

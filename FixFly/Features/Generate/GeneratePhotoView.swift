@@ -45,7 +45,7 @@ struct GeneratePhotoFormView: View {
                 
                 generateButton
 
-                AIDisclosureFootnote(model: "Gemini")
+                AIDisclosureFootnote(provider: .gemini)
                     .padding(.horizontal, 20)
                     .padding(.bottom, 10)
             }
