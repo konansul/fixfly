@@ -20,7 +20,24 @@ enum AppAnalytics {
             )
             return
         }
+
+        // Revenue only reaches Firebase's reports through the reserved `purchase`
+        // event. Logged as a custom `purchase_success` it showed up as an event
+        // with zero money attached, so the console reported no revenue at all.
+        if case .purchaseSuccess = event {
+            FirebaseAnalytics.Analytics.logEvent(
+                AnalyticsEventPurchase,
+                parameters: event.parameters
+            )
+            TikTokAnalytics.track(event)
+            return
+        }
+
         FirebaseAnalytics.Analytics.logEvent(event.name, parameters: event.parameters)
+
+        // Mirror the funnel events TikTok optimizes ads on. TikTokAnalytics
+        // decides which ones matter and is a no-op until the SDK is added.
+        TikTokAnalytics.track(event)
     }
 }
 
@@ -32,7 +49,10 @@ enum AppEvent {
     case featureSelected(kind: String)     // tapped AI Photo / AI Video card
     case templateOpened(template: String?) // opened the full-screen template feed
     case paywallShown(source: String)
-    case purchaseSuccess(productId: String)
+    /// `value` and `currency` are what make this a revenue event. Without them
+    /// Firebase reports zero revenue and TikTok can only optimise on the *count*
+    /// of purchases, never on their value.
+    case purchaseSuccess(productId: String, value: Double, currency: String, transactionId: String?)
     case purchaseFailed(productId: String, reason: String)
     case generateStarted(kind: String, template: String?)
     case generateCompleted(kind: String)
@@ -69,8 +89,17 @@ enum AppEvent {
             return p
         case .paywallShown(let source):
             return ["source": source]
-        case .purchaseSuccess(let pid):
-            return ["product_id": pid]
+        case .purchaseSuccess(let pid, let value, let currency, let txId):
+            // The keys are Firebase's reserved names — and TikTok reads the same
+            // two ("value", "currency") off a Purchase event, so one dictionary
+            // serves both.
+            var p: [String: Any] = [
+                "product_id": pid,
+                AnalyticsParameterValue: value,
+                AnalyticsParameterCurrency: currency,
+            ]
+            if let txId { p[AnalyticsParameterTransactionID] = txId }
+            return p
         case .purchaseFailed(let pid, let reason):
             return ["product_id": pid, "reason": String(reason.prefix(100))]
         case .generateStarted(let kind, let template):

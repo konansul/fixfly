@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5672B07230014DF0004389FB /* TikTokBusinessSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 5672B07130014DF0004389FB /* TikTokBusinessSDK */; };
 		569A41F12F5F323A00689C97 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 569A41F02F5F323A00689C97 /* KeychainAccess */; };
 		56B2BFBE2FDEB64800E0E1DD /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 56B2BFBD2FDEB64800E0E1DD /* FirebaseAnalytics */; };
 		56B2BFC02FDEB64800E0E1DD /* FirebaseAnalyticsCore in Frameworks */ = {isa = PBXBuildFile; productRef = 56B2BFBF2FDEB64800E0E1DD /* FirebaseAnalyticsCore */; };
@@ -57,6 +58,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				56B2BFBE2FDEB64800E0E1DD /* FirebaseAnalytics in Frameworks */,
+				5672B07230014DF0004389FB /* TikTokBusinessSDK in Frameworks */,
 				56B2BFC22FDEB64800E0E1DD /* FirebaseAnalyticsIdentitySupport in Frameworks */,
 				56B2BFCC2FDEB64800E0E1DD /* FirebaseCore in Frameworks */,
 				56D68C3B2F76B678003760B0 /* Kingfisher in Frameworks */,
@@ -126,6 +128,7 @@
 				56B2BFBF2FDEB64800E0E1DD /* FirebaseAnalyticsCore */,
 				56B2BFC12FDEB64800E0E1DD /* FirebaseAnalyticsIdentitySupport */,
 				56B2BFCB2FDEB64800E0E1DD /* FirebaseCore */,
+				5672B07130014DF0004389FB /* TikTokBusinessSDK */,
 			);
 			productName = FixFly;
 			productReference = 562EFE982F50C7010019C0CB /* FixFly.app */;
@@ -183,6 +186,7 @@
 				569A41EF2F5F323A00689C97 /* XCRemoteSwiftPackageReference "KeychainAccess" */,
 				56D68C382F76B4C6003760B0 /* XCRemoteSwiftPackageReference "Kingfisher" */,
 				56B2BFB82FDEB53700E0E1DD /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				5672B07030014927004389FB /* XCRemoteSwiftPackageReference "tiktok-business-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 562EFE992F50C7010019C0CB /* Products */;
@@ -510,6 +514,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		5672B07030014927004389FB /* XCRemoteSwiftPackageReference "tiktok-business-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/tiktok/tiktok-business-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.6.1;
+			};
+		};
 		569A41EF2F5F323A00689C97 /* XCRemoteSwiftPackageReference "KeychainAccess" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/kishikawakatsumi/KeychainAccess";
@@ -537,6 +549,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		5672B07130014DF0004389FB /* TikTokBusinessSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5672B07030014927004389FB /* XCRemoteSwiftPackageReference "tiktok-business-ios-sdk" */;
+			productName = TikTokBusinessSDK;
+		};
 		569A41F02F5F323A00689C97 /* KeychainAccess */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 569A41EF2F5F323A00689C97 /* XCRemoteSwiftPackageReference "KeychainAccess" */;

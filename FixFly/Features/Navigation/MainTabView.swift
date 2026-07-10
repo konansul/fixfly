@@ -25,6 +25,11 @@ struct MainTabView: View {
     @ObservedObject private var router = DeepLinkRouter.shared
     @State private var selection: AppTab = .home
 
+    // One-time guest promo advertising the free signup coins. Shown once per
+    // install to users who reached the app without signing in.
+    @AppStorage("guest_bonus_prompt_shown") private var guestBonusPromptShown = false
+    @State private var showGuestBonus = false
+
     // "apple.intelligence" only exists from iOS 18.1 (SF Symbols 6.1).
     private var generateIcon: String {
         if #available(iOS 18.1, *) {
@@ -35,21 +40,39 @@ struct MainTabView: View {
     }
 
     var body: some View {
-        TabView(selection: $selection) {
-            Tab("Home", systemImage: "house.fill", value: AppTab.home) {
-                HomeView()
+        ZStack {
+            TabView(selection: $selection) {
+                Tab("Home", systemImage: "house.fill", value: AppTab.home) {
+                    HomeView()
+                }
+
+                Tab("Library", systemImage: "photo.on.rectangle", value: AppTab.library) {
+                    LibraryView()
+                }
+
+                Tab("Generate", systemImage: generateIcon, value: AppTab.generate) {
+                    GenerateView()
+                }
+
+                Tab("Profile", systemImage: "person.crop.circle", value: AppTab.profile) {
+                    MyGenerationsView()
+                }
             }
 
-            Tab("Library", systemImage: "photo.on.rectangle", value: AppTab.library) {
-                LibraryView()
-            }
-
-            Tab("Generate", systemImage: generateIcon, value: AppTab.generate) {
-                GenerateView()
-            }
-
-            Tab("Profile", systemImage: "person.crop.circle", value: AppTab.profile) {
-                MyGenerationsView()
+            // Guest promo for the free signup coins. Overlaid (not a second
+            // fullScreenCover) so it never conflicts with the welcome-bonus cover
+            // below; the two are mutually exclusive (guest vs just-signed-in).
+            if showGuestBonus {
+                GuestBonusPromptView(
+                    coins: AppConfigStore.shared.signupBonusCoins,
+                    onSignIn: {
+                        withAnimation { showGuestBonus = false }
+                        auth.requireSignIn()
+                    },
+                    onDismiss: { withAnimation { showGuestBonus = false } }
+                )
+                .transition(.opacity)
+                .zIndex(10)
             }
         }
         .tint(.white)
@@ -71,6 +94,8 @@ struct MainTabView: View {
             // also registers for remote push (APNs token → backend), which is
             // what makes "your photo is ready" and renewal pushes actually work.
             await NotificationManager.shared.requestAuthorization()
+            // After the system prompt, nudge guests about the free coins (once).
+            maybeShowGuestBonus()
         }
         .onAppear {
             AppAnalytics.track(.screen(name: selection.screenName))
@@ -85,5 +110,15 @@ struct MainTabView: View {
                 selection = .profile
             }
         }
+    }
+
+    /// Show the guest bonus promo once per install, only to users who haven't
+    /// signed in and only when a bonus is actually configured on the backend.
+    private func maybeShowGuestBonus() {
+        guard !auth.isAuthed,
+              !guestBonusPromptShown,
+              AppConfigStore.shared.signupBonusCoins > 0 else { return }
+        guestBonusPromptShown = true
+        withAnimation { showGuestBonus = true }
     }
 }

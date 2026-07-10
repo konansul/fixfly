@@ -120,7 +120,18 @@ final class PaywallViewModel: ObservableObject {
             }
             
             await checkActiveSubscription()
-            AppAnalytics.track(.purchaseSuccess(productId: selectedProductId))
+
+            // StoreKit is the only place that knows what the user actually paid:
+            // the price is set per storefront, so it is not ours to guess.
+            let product = store.product(for: selectedProductId)
+            let value = NSDecimalNumber(decimal: product?.price ?? 0).doubleValue
+            let currency = product?.priceFormatStyle.currencyCode ?? "USD"
+            AppAnalytics.track(.purchaseSuccess(
+                productId: selectedProductId,
+                value: value,
+                currency: currency,
+                transactionId: store.lastTransactionId
+            ))
             return true
         } catch {
             errorText = error.localizedDescription

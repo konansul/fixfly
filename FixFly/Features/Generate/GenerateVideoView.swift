@@ -48,7 +48,7 @@ struct GenerateVideoFormView: View {
                 
                 generateButton
 
-                AIDisclosureFootnote(model: "Veo")
+                AIDisclosureFootnote(provider: .veo)
                     .padding(.horizontal, 20)
                     .padding(.bottom, 10)
             }
