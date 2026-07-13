@@ -6,6 +6,7 @@
 import SwiftUI
 import KeychainAccess
 import FirebaseCore
+import FirebaseAnalytics
 
 final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(
@@ -17,6 +18,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         NetworkSession.configureSharedCache()
 
         FirebaseApp.configure()
+
+        // Don't pollute the production Analytics dataset with events from local
+        // test builds — collection stays on only in Release. (Firebase is still
+        // configured so Crashlytics/other services keep working.)
+        #if DEBUG
+        Analytics.setAnalyticsCollectionEnabled(false)
+        #endif
 
         // TikTok Business SDK — auto-tracks install/launch and receives the
         // funnel events forwarded from AppAnalytics. No-op until the SPM package

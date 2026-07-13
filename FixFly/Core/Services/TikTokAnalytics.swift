@@ -38,7 +38,11 @@ enum TikTokAnalytics {
     /// Call once at launch (after FirebaseApp.configure()). The SDK auto-tracks
     /// install + launch by itself once initialized, so we don't forward app_open.
     static func initialize() {
-        #if canImport(TikTokBusinessSDK)
+        #if DEBUG
+        // Local test builds must not send TikTok events to the production dataset.
+        print("[TikTokAnalytics] skipped in DEBUG build")
+        return
+        #elseif canImport(TikTokBusinessSDK)
         guard appId != "YOUR_APP_ID", tiktokAppId != "YOUR_TIKTOK_APP_ID" else {
             print("[TikTokAnalytics] skipped: appId / tiktokAppId not set")
             return
@@ -84,7 +88,9 @@ enum TikTokAnalytics {
     /// on are sent; everything else (screen views, generate steps, failures) is
     /// dropped to keep the ad signal clean.
     static func track(_ event: AppEvent) {
-        #if canImport(TikTokBusinessSDK)
+        #if DEBUG
+        return
+        #elseif canImport(TikTokBusinessSDK)
         guard let name = standardEventName(for: event) else { return }
         let tt = TikTokBaseEvent(eventName: name)
         for (key, value) in event.parameters {
