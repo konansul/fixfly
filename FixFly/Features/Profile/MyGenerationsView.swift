@@ -5,6 +5,7 @@ struct MyGenerationsView: View {
     @StateObject private var vm = MyGenerationsViewModel()
     @ObservedObject private var router = DeepLinkRouter.shared
     @ObservedObject private var auth = AuthStore.shared
+    @ObservedObject private var config = AppConfigStore.shared
     @State private var selectedItemForCompare: GenerationItemDTO?
     @State private var showSettings = false
     @State private var showCoinsSheet = false
@@ -104,8 +105,17 @@ struct MyGenerationsView: View {
             .navigationDestination(item: $selectedItemForCompare) { selectedItem in
                 let isVideo = selectedItem.outputUrl?.lowercased().hasSuffix(".mp4") == true ||
                               selectedItem.outputUrl?.lowercased().hasSuffix(".mov") == true
-                
-                if isVideo, let outStr = selectedItem.outputUrl, let videoURL = URL(string: outStr) {
+
+                if selectedItem.isPhotoshoot {
+                    // A photoshoot is a set of photos, not a before/after — open the gallery.
+                    PhotoshootResultView(
+                        title: getDisplayTitle(for: selectedItem),
+                        urls: selectedItem.displayUrls
+                    ) {
+                        Task { await vm.deleteGeneration(taskId: selectedItem.id) }
+                    }
+                    .toolbar(.hidden, for: .tabBar)
+                } else if isVideo, let outStr = selectedItem.outputUrl, let videoURL = URL(string: outStr) {
                     VideoResultView(title: getDisplayTitle(for: selectedItem), videoURL: videoURL) {
                         Task { await vm.deleteGeneration(taskId: selectedItem.id) }
                     }
@@ -286,6 +296,13 @@ struct MyGenerationsView: View {
     }
 
     private func getDisplayTitle(for item: GenerationItemDTO) -> String {
+        if item.isPhotoshoot {
+            if let meta = item.requestMeta, let name = meta["template_name"] {
+                return name.description
+            }
+            return "Photoshoot"
+        }
+
         if item.featureKey == "nano_banana_image" || item.featureKey == "prompt_to_image" {
             if let meta = item.requestMeta, let styleValue = meta["style"] {
                 switch styleValue {
@@ -366,34 +383,59 @@ struct MyGenerationsView: View {
         }
     }
 
-    /// Shown to guests instead of an error — invites Sign in with Apple.
+    /// Shown to guests instead of an error — invites Sign in with Apple. Same card
+    /// design as the wallet sheet's signed-out block: lead with the reward when the
+    /// backend is granting a signup bonus.
     private var signedOutView: some View {
-        VStack(spacing: 14) {
+        let bonus = config.signupBonusCoins
+
+        return VStack {
             Spacer()
-            Image(systemName: "person.crop.circle.badge.plus")
-                .font(.system(size: 30))
-                .foregroundStyle(.white.opacity(0.85))
-            Text("Sign in to see your creations")
-                .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(.white)
-            Text("Sign in with Apple to keep your coins and generations across devices.")
-                .multilineTextAlignment(.center)
-                .font(.system(size: 14))
-                .foregroundStyle(.white.opacity(0.7))
-                .padding(.horizontal, 28)
+            VStack(spacing: 14) {
+                if bonus > 0 {
+                    HStack(spacing: 7) {
+                        Image(systemName: "gift.fill")
+                            .font(.system(size: 13, weight: .bold))
+                        Text("\(bonus) FREE COINS")
+                            .font(.system(size: 13, weight: .heavy))
+                            .tracking(0.5)
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(FixFlyGradient.linear))
+                    .shadow(color: FixFlyGradient.accent.opacity(0.5), radius: 12)
+                } else {
+                    Image(systemName: "person.crop.circle.badge.plus")
+                        .font(.system(size: 40))
+                        .foregroundStyle(.white.opacity(0.85))
+                }
 
-            SignInWithAppleButton(.signIn) { request in
-                request.requestedScopes = [.fullName, .email]
-            } onCompletion: { result in
-                handleAppleSignIn(result)
+                Text(bonus > 0 ? "Sign in and get \(bonus) free coins" : "Sign in to see your creations")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+
+                Text(bonus > 0
+                     ? "Enough to create your first AI photo — on us. Your creations stay saved across all your devices."
+                     : "Sign in with Apple to keep your coins and generations across devices.")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.white.opacity(0.75))
+                    .multilineTextAlignment(.center)
+
+                SignInWithAppleButton(.signIn) { request in
+                    request.requestedScopes = [.fullName, .email]
+                } onCompletion: { result in
+                    handleAppleSignIn(result)
+                }
+                .signInWithAppleButtonStyle(.white)
+                .frame(height: 50)
+                .clipShape(Capsule())
+                .disabled(auth.isLoading)
+                .padding(.top, 4)
             }
-            .signInWithAppleButtonStyle(.white)
-            .frame(height: 50)
-            .clipShape(Capsule())
-            .disabled(auth.isLoading)
-            .padding(.horizontal, 40)
-            .padding(.top, 6)
-
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 32)
             Spacer()
         }
     }

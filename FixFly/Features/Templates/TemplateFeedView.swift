@@ -426,7 +426,8 @@ struct TemplateFeedView: View {
             )
             .font(.system(size: 17, weight: .bold))
             .foregroundStyle(.white)
-            .textInputAutocapitalization(.characters)
+            .keyboardType((input.numeric ?? false) ? .numberPad : .default)
+            .textInputAutocapitalization((input.numeric ?? false) ? .never : .characters)
             .autocorrectionDisabled()
             .submitLabel(.done)
             .padding(.horizontal, 14)
@@ -507,9 +508,19 @@ struct TemplateFeedView: View {
         }
 
         // Two-step template: the backend draws this frame first, then animates it.
-        // Ordinary templates send nothing and stay one-step.
-        if let still = await MainActor.run(body: { resolvedStillPrompt(for: template) }) {
+        // A country picker on a two-step template (Fan Face Paint) carries a
+        // per-variant still, which wins over the template-level one. Ordinary
+        // templates send nothing and stay one-step.
+        if let variantStill = variant?.stillPrompt {
+            extra["still_prompt"] = variantStill
+        } else if let still = await MainActor.run(body: { resolvedStillPrompt(for: template) }) {
             extra["still_prompt"] = still
+        }
+
+        // Animate-in-place (duo hug): the uploaded photo is the first frame, so the
+        // backend must not compose or restyle it.
+        if template.animatePhoto == true {
+            extra["animate_uploaded"] = "1"
         }
 
         let ratio = input.size.width / input.size.height

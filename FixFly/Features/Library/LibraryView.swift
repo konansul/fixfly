@@ -1,24 +1,43 @@
 import SwiftUI
 
 enum LibraryMediaType: String, CaseIterable {
-    case photo = "Photo"
+    // Video first, per the Library redesign.
     case video = "Video"
+    case photo = "Photo"
+}
+
+struct LibraryCategory: Decodable, Identifiable, Hashable {
+    let key: String
+    let title: String
+    let items: [RemoteCardItem]
+    var id: String { key }
 }
 
 struct LibraryResponse: Decodable {
+    // Flat lists power search (across every category of a type). The categorised
+    // lists power the pills + grid.
     let videos: [RemoteCardItem]
     let photos: [RemoteCardItem]
+    let videoCategories: [LibraryCategory]
+    let photoCategories: [LibraryCategory]
 }
 
 struct LibraryView: View {
     var activateSearchOnAppear: Bool = false
     @State private var isSearchPresented: Bool = false
 
-    @State private var selectedMediaType: LibraryMediaType = .photo
+    @State private var selectedMediaType: LibraryMediaType = .video
     @State private var searchText: String = ""
     @State private var feedNavData: FeedNavigationData?
-    @State private var videoItems: [RemoteCardItem] = []
+
+    @State private var videoCategories: [LibraryCategory] = []
+    @State private var photoCategories: [LibraryCategory] = []
+    @State private var videoItems: [RemoteCardItem] = []   // search pool
     @State private var photoItems: [RemoteCardItem] = []
+
+    @State private var selectedVideoCat: String = ""
+    @State private var selectedPhotoCat: String = ""
+
     @State private var isLoading: Bool = true
     @State private var showPaywall: Bool = false
 
@@ -36,7 +55,13 @@ struct LibraryView: View {
                         mediaTypeToggle
                             .padding(.horizontal, 16)
                             .padding(.top, 10)
-                            .padding(.bottom, 24)
+                            .padding(.bottom, 14)
+
+                        // Category pills hide while searching (search spans all).
+                        if searchText.isEmpty && !currentCategories.isEmpty {
+                            categoryPills
+                                .padding(.bottom, 16)
+                        }
 
                         if isLoading {
                             ProgressView()
@@ -44,13 +69,13 @@ struct LibraryView: View {
                                 .padding(.top, 40)
                         } else {
                             LazyVGrid(columns: columns, spacing: 14) {
-                                ForEach(filteredItems) { item in
+                                ForEach(displayedItems) { item in
                                     Button {
                                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                        let index = filteredItems.firstIndex(where: { $0.id == item.id }) ?? 0
+                                        let index = displayedItems.firstIndex(where: { $0.id == item.id }) ?? 0
                                         feedNavData = FeedNavigationData(
-                                            templates: filteredItems,
-                                            sectionId: "library_\(selectedMediaType.rawValue.lowercased())",
+                                            templates: displayedItems,
+                                            sectionId: "library_\(selectedMediaType.rawValue.lowercased())_\(selectedCatKey)",
                                             currentIndex: index
                                         )
                                     } label: {
@@ -107,15 +132,42 @@ struct LibraryView: View {
         .contentShape(Rectangle())
     }
 
-    private var filteredItems: [RemoteCardItem] {
-        let items = selectedMediaType == .video ? videoItems : photoItems
-        if searchText.isEmpty {
-            return items
-        } else {
-            return items.filter { item in
-                (item.styleId ?? "").localizedCaseInsensitiveContains(searchText)
+    private var categoryPills: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(currentCategories) { cat in
+                    PillToggle(title: cat.title, isSelected: cat.key == selectedCatKey) {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        if selectedMediaType == .video {
+                            selectedVideoCat = cat.key
+                        } else {
+                            selectedPhotoCat = cat.key
+                        }
+                    }
+                }
             }
+            .padding(.horizontal, 16)
         }
+    }
+
+    // MARK: - Derived
+
+    private var currentCategories: [LibraryCategory] {
+        selectedMediaType == .video ? videoCategories : photoCategories
+    }
+
+    private var selectedCatKey: String {
+        selectedMediaType == .video ? selectedVideoCat : selectedPhotoCat
+    }
+
+    private var displayedItems: [RemoteCardItem] {
+        if !searchText.isEmpty {
+            let pool = selectedMediaType == .video ? videoItems : photoItems
+            return pool.filter { ($0.styleId ?? "").localizedCaseInsensitiveContains(searchText) }
+        }
+        let cats = currentCategories
+        return cats.first(where: { $0.key == selectedCatKey })?.items
+            ?? cats.first?.items ?? []
     }
 
     private func loadLibraryData() async {
@@ -128,8 +180,12 @@ struct LibraryView: View {
             let (data, _) = try await URLSession.shared.data(for: request)
             let response = try JSONDecoder().decode(LibraryResponse.self, from: data)
             await MainActor.run {
+                self.videoCategories = response.videoCategories
+                self.photoCategories = response.photoCategories
                 self.videoItems = response.videos
                 self.photoItems = response.photos
+                self.selectedVideoCat = response.videoCategories.first?.key ?? ""
+                self.selectedPhotoCat = response.photoCategories.first?.key ?? ""
                 self.isLoading = false
             }
         } catch {

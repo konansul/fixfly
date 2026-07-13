@@ -173,7 +173,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 562EFE932F50C7010019C0CB /* Build configuration list for PBXProject "FixFly" */;
+			buildConfigurationList = 562EFE932F50C7010019C0CB /* Build configuration list for PBXProject "FixFly " */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -484,7 +484,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		562EFE932F50C7010019C0CB /* Build configuration list for PBXProject "FixFly" */ = {
+		562EFE932F50C7010019C0CB /* Build configuration list for PBXProject "FixFly " */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				562EFEA12F50C7030019C0CB /* Debug */,
