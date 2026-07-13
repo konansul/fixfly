@@ -94,27 +94,28 @@ struct RoundedRemoteMediaCard: View {
                 }
             }
         }
-        .frame(width: 152, height: 202)
+        // A touch smaller than the original 152×202, but bigger than the very
+        // compact 134×178 — the sweet spot.
+        .frame(width: 144, height: 192)
         .clipped()
         .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 13, style: .continuous)
                 .stroke(Color.white.opacity(0.08), lineWidth: 1)
         )
-//        .overlay(alignment: .bottomLeading) {
-//            if let name = displayTitle, name.lowercased() != "none" {
-//                Text(name.replacingOccurrences(of: "_", with: " ").capitalized)
-//                    .font(.system(size: 12, weight: .bold))
-//                    .foregroundStyle(.white)
-//                    .lineLimit(2)
-//                    .multilineTextAlignment(.leading)
-//                    .padding(.horizontal, 10)
-//                    .padding(.vertical, 6)
-//                    .background(Color.black.opacity(0.4)) // Тёмная окантовка (фон)
-//                    .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
-//                    .padding(10) // Отступ от краев карточки
-//            }
-//        }
+        // Template name — bottom-left, plain (no dark background), a soft shadow
+        // keeps it legible over the artwork.
+        .overlay(alignment: .bottomLeading) {
+            if let name = displayTitle, name.lowercased() != "none" {
+                Text(name.replacingOccurrences(of: "_", with: " ").capitalized)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .shadow(color: .black.opacity(0.65), radius: 3, x: 0, y: 1)
+                    .padding(10)
+            }
+        }
     }
 
     private var fallback: some View {

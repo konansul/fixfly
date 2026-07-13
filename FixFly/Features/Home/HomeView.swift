@@ -53,10 +53,21 @@ struct HomeView: View {
 
 
                 ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 24) {
+                    // Lazy: only the sections actually on screen instantiate (and start
+                    // downloading their cards' video/images). A plain VStack built every
+                    // section at once, so opening Home kicked off dozens of simultaneous
+                    // media downloads and the whole feed sat dark until they finished.
+                    LazyVStack(spacing: 24) {
                         HeroHeaderRemote(heroItems: vm.home?.hero.items ?? []) { tappedItem in
                             handleHeroTap(tappedItem)
                         }
+
+                        // Client-driven (separate endpoint from /home). Renders
+                        // nothing until it has templates, so it can't break Home.
+                        // Order: AI Photoshoot first, then the server sections, with
+                        // the two-people "Together" row injected between Make Me Dance
+                        // and Make Them Dance (see below).
+                        PhotoshootHomeSection()
 
                         ForEach(vm.home?.sections ?? []) { section in
                             VStack(alignment: .leading, spacing: 14) {
@@ -80,6 +91,12 @@ struct HomeView: View {
                                         onCardTap(section: section, item: item)
                                     }
                                 }
+                            }
+
+                            // "Together" (two-photo hug) — client-driven from its own
+                            // /duo-templates endpoint, placed right after Make Me Dance.
+                            if section.id == "make_me_dance" {
+                                DuoHomeSection()
                             }
                         }
                         Spacer(minLength: 40)
@@ -319,14 +336,15 @@ struct GridRemoteMediaCard: View {
         .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Color.white.opacity(0.1), lineWidth: 1))
         .overlay(alignment: .bottomLeading) {
             if let styleName = item.styleId, styleName.lowercased() != "none" {
+                // Plain name + soft shadow, no dark capsule (matches the Photoshoot
+                // and standard cards).
                 Text(styleName.replacingOccurrences(of: "_", with: " ").capitalized)
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.black.opacity(0.3))
-                    .clipShape(Capsule())
-                    .padding(8)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .shadow(color: .black.opacity(0.65), radius: 3, x: 0, y: 1)
+                    .padding(10)
             }
         }
     }

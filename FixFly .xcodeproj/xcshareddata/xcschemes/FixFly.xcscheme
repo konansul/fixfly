@@ -18,7 +18,7 @@
                BlueprintIdentifier = "562EFE972F50C7010019C0CB"
                BuildableName = "FixFly.app"
                BlueprintName = "FixFly"
-               ReferencedContainer = "container:FixFly.xcodeproj">
+               ReferencedContainer = "container:FixFly .xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -38,7 +38,7 @@
                BlueprintIdentifier = "56EABFED2F660F8100E0C027"
                BuildableName = "FixFlyUITests.xctest"
                BlueprintName = "FixFlyUITests"
-               ReferencedContainer = "container:FixFly.xcodeproj">
+               ReferencedContainer = "container:FixFly .xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -60,7 +60,7 @@
             BlueprintIdentifier = "562EFE972F50C7010019C0CB"
             BuildableName = "FixFly.app"
             BlueprintName = "FixFly"
-            ReferencedContainer = "container:FixFly.xcodeproj">
+            ReferencedContainer = "container:FixFly .xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <CommandLineArguments>
@@ -91,7 +91,7 @@
             BlueprintIdentifier = "562EFE972F50C7010019C0CB"
             BuildableName = "FixFly.app"
             BlueprintName = "FixFly"
-            ReferencedContainer = "container:FixFly.xcodeproj">
+            ReferencedContainer = "container:FixFly .xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

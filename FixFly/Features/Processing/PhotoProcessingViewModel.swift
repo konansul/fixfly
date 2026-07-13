@@ -20,6 +20,8 @@ struct TaskStatusResponse: Decodable {
     let status: String
     let progress: Double?
     let output_url: String?
+    /// A photoshoot's full 5-photo set (nil for single-output features).
+    let outputs: [String]?
     let error_text: String?
 }
 

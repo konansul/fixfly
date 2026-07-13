@@ -57,6 +57,10 @@ struct TemplateVariant: Decodable, Identifiable, Hashable {
     /// Absent for dances — there the driving clip is the instruction, and the
     /// backend resolves it from `id` alone.
     let prompt: String?
+    /// Per-variant first frame for a two-step template whose still differs by
+    /// choice (e.g. Fan Face Paint: each country paints a different flag). When
+    /// present it overrides the template-level `stillPrompt`.
+    let stillPrompt: String?
 }
 
 /// A short piece of text the user types before generating — e.g. the slogan on the
@@ -69,6 +73,9 @@ struct TemplateInput: Decodable, Identifiable, Hashable {
     let label: String
     let placeholder: String
     let maxLength: Int
+    /// When true (e.g. the age in Birthday Wave), show a number pad and skip
+    /// auto-capitalisation. Absent/false for free text like the cake slogan.
+    let numeric: Bool?
 }
 
 struct RemoteCardItem: Decodable, Identifiable, Hashable {
@@ -116,6 +123,11 @@ struct RemoteCardItem: Decodable, Identifiable, Hashable {
     /// before it opens the picker.
     let requiresFullBody: Bool?
 
+    /// "Animate in place" templates (the duo hug): the uploaded photo already has
+    /// both people; it IS the first frame and Veo only animates it. Sent to the
+    /// backend as `animate_uploaded` so nothing is composed or restyled.
+    let animatePhoto: Bool?
+
     var actualResultType: MediaType {
         return resultType ?? mediaType
     }
@@ -125,6 +137,22 @@ struct RemoteCardItem: Decodable, Identifiable, Hashable {
     }
 
     var needsFullBodyPhoto: Bool { requiresFullBody == true }
+}
+
+extension RemoteCardItem {
+    /// A display-only video card for client-driven features (e.g. the Together row),
+    /// so they can reuse the standard card views (RoundedRemoteMediaCard /
+    /// GridRemoteMediaCard) instead of a bespoke card. Tapping is handled by the
+    /// caller's own NavigationLink, not by these fields.
+    static func displayVideo(id: String, title: String, videoUrl: String) -> RemoteCardItem {
+        RemoteCardItem(
+            id: id, mediaType: .video, mediaUrl: videoUrl, posterUrl: nil,
+            modelUrl: nil, styleId: title, prompt: nil, resultType: .video,
+            isNew: nil, variants: nil, variant: nil, forceAspectRatio: nil,
+            stillPrompt: nil, stillPromptTemplate: nil, inputs: nil,
+            engine: nil, requiresFullBody: nil, animatePhoto: nil
+        )
+    }
 }
 
 struct HomeActionDTO: Decodable {
