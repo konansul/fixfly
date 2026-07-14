@@ -53,11 +53,12 @@ struct HomeView: View {
 
 
                 ScrollView(.vertical, showsIndicators: false) {
-                    // Lazy: only the sections actually on screen instantiate (and start
-                    // downloading their cards' video/images). A plain VStack built every
-                    // section at once, so opening Home kicked off dozens of simultaneous
-                    // media downloads and the whole feed sat dark until they finished.
-                    LazyVStack(spacing: 24) {
+                    // A plain (non-lazy) VStack keeps every section alive once built, so
+                    // scrolling back up does NOT tear down and re-create the video cards
+                    // (LazyVStack did, which re-initialised each AVPlayer and flashed black).
+                    // Initial load stays acceptable because all card media is served from
+                    // the CDN (Front Door), preloaded (HomePreloader) and disk-cached.
+                    VStack(spacing: 24) {
                         HeroHeaderRemote(heroItems: vm.home?.hero.items ?? []) { tappedItem in
                             handleHeroTap(tappedItem)
                         }
