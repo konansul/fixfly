@@ -28,6 +28,8 @@ struct DuoCatalogView: View {
                                     .toolbar(.hidden, for: .tabBar)
                             } label: {
                                 GridRemoteMediaCard(item: template.cardItem)
+                                    .allowsHitTesting(false)
+                                    .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
                         }
