@@ -17,6 +17,21 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         // template previews persist across launches instead of re-downloading.
         NetworkSession.configureSharedCache()
 
+        // Force transparent nav + tab bars on every iOS version so the app's own
+        // background shows through. Without this, iOS 26 defaults the bars to an
+        // opaque dark fill (they look black), while older iOS renders them clear —
+        // the same build then looks very different per device.
+        let navAppearance = UINavigationBarAppearance()
+        navAppearance.configureWithTransparentBackground()
+        UINavigationBar.appearance().standardAppearance = navAppearance
+        UINavigationBar.appearance().scrollEdgeAppearance = navAppearance
+        UINavigationBar.appearance().compactAppearance = navAppearance
+
+        let tabAppearance = UITabBarAppearance()
+        tabAppearance.configureWithTransparentBackground()
+        UITabBar.appearance().standardAppearance = tabAppearance
+        UITabBar.appearance().scrollEdgeAppearance = tabAppearance
+
         FirebaseApp.configure()
 
         // Don't pollute the production Analytics dataset with events from local
