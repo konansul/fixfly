@@ -25,7 +25,12 @@ struct DuoHomeSection: View {
                                 DuoDetailView(template: template)
                                     .toolbar(.hidden, for: .tabBar)
                             } label: {
+                                // Disable hit-testing on the card so the video view
+                                // doesn't eat the tap; contentShape makes the whole
+                                // card area the tap target (matches HorizontalRemoteCards).
                                 RoundedRemoteMediaCard(item: template.cardItem)
+                                    .allowsHitTesting(false)
+                                    .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
                             .simultaneousGesture(TapGesture().onEnded {
