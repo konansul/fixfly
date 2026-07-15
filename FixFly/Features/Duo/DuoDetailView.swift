@@ -154,7 +154,7 @@ struct DuoDetailView: View {
                 .multilineTextAlignment(.center)
 
             HStack(spacing: 10) {
-                badge(icon: "person.2.fill", text: needsTwo ? "2 photos" : "1 photo")
+                badge(icon: "video.fill", text: "1 video")
                 badge(icon: "bitcoinsign.circle.fill", text: "\(template.cost) coins", iconColor: .yellow)
                 AIDisclosureFootnote(provider: .gemini)
             }

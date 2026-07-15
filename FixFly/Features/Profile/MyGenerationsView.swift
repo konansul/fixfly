@@ -350,9 +350,6 @@ struct MyGenerationsView: View {
         VStack(spacing: 14) {
             Spacer()
             ProgressView().tint(.white).scaleEffect(1.1)
-            Text("Loading...")
-                .foregroundStyle(.white.opacity(0.8))
-                .font(.system(size: 15, weight: .medium))
             Spacer()
         }
     }
