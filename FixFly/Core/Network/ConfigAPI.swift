@@ -13,7 +13,8 @@ enum ConfigAPI {
     // static let baseURL = "http://192.168.1.78:8000"
 
     // Production (Azure) — used for App Store / TestFlight builds.
-    static let baseURL = "https://fixfly-d9hmdbajfbgkfrh2.canadacentral-01.azurewebsites.net"
+    // New Azure account (migrated 2026-07-16); old account was disabled for non-payment.
+    static let baseURL = "https://fixfly-32d3dc.azurewebsites.net"
 
     static let appStoreID = "6777982481"
 
