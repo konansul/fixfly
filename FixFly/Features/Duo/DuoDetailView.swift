@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import AVFoundation
 
 struct DuoDetailView: View {
     let template: DuoTemplateDTO
@@ -79,6 +80,15 @@ struct DuoDetailView: View {
         .navigationTitle(template.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .onAppear {
+            // Let the Together preview play with sound even when the phone's
+            // silent switch is on, matching the video-template detail screen.
+            // Activating the session can block, so do it off the main thread.
+            DispatchQueue.global(qos: .userInitiated).async {
+                try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+                try? AVAudioSession.sharedInstance().setActive(true)
+            }
+        }
         .sheet(isPresented: $showPicker) {
             ImagePicker(sourceType: .photoLibrary) { image in
                 if activeSlot == 1 { photo1 = image } else { photo2 = image }
@@ -119,7 +129,7 @@ struct DuoDetailView: View {
     private var heroPreview: some View {
         Group {
             if let url = URL(string: template.previewUrl) {
-                LoopingVideoView(url: url, isActive: true, isMuted: true)
+                LoopingVideoView(url: url, isActive: true, isMuted: false)
             } else {
                 AsyncImage(url: URL(string: template.posterUrl)) { phase in
                     if let image = phase.image {
