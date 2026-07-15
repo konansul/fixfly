@@ -7,6 +7,11 @@ struct HeroHeaderRemote: View {
 
     @State private var selectedIndex = 0
     @State private var dragX: CGFloat = 0
+    // Only the on-screen, currently-selected page decodes video. Without this
+    // every hero page kept an AVPlayer decoding at once (all pages are laid out
+    // together, offset off-screen), and they kept running even after the hero
+    // scrolled away — a big, constant source of device heat.
+    @State private var heroVisible = true
     
     // Hero showcase videos are 8 s long — give each one time to play
     // before auto-advancing.
@@ -25,7 +30,7 @@ struct HeroHeaderRemote: View {
                     // all overlap, so a per-page tap always hit the topmost one.
                     ZStack {
                         ForEach(Array(heroItems.enumerated()), id: \.element.id) { index, item in
-                            HeroMediaPage(item: item)
+                            HeroMediaPage(item: item, isActive: index == selectedIndex && heroVisible)
                                 .frame(width: width, height: heroHeight)
                                 .clipped()
                                 .offset(x: xOffset(for: index, width: width))
@@ -108,6 +113,10 @@ struct HeroHeaderRemote: View {
                 selectedIndex = (selectedIndex + 1) % heroItems.count
             }
         }
+        // Pause the hero video entirely once it scrolls out of the feed.
+        .onScrollVisibilityChange(threshold: 0.1) { visible in
+            heroVisible = visible
+        }
     }
 
     private func xOffset(for index: Int, width: CGFloat) -> CGFloat {
@@ -117,14 +126,15 @@ struct HeroHeaderRemote: View {
 
 private struct HeroMediaPage: View {
     let item: HeroMediaItemDTO
+    var isActive: Bool = true
 
     var body: some View {
         ZStack {
             switch item.mediaType {
-                
+
             case "video":
                 if let url = URL(string: item.mediaUrl) {
-                    LoopingVideoView(url: url, isActive: true)
+                    LoopingVideoView(url: url, isActive: isActive)
                         .allowsHitTesting(false)
                 } else {
                     fallback
