@@ -32,11 +32,13 @@ struct LoopingCardVideoView: View {
 
     var body: some View {
         LoopingVideoView(url: url, isActive: isVisible, isMuted: isMuted)
-            // Pause players that scroll off screen. `.onScrollVisibilityChange`
-            // tracks real visibility in the scroll viewport, so it works even in a
-            // plain (non-lazy) VStack where `.onDisappear` never fires — otherwise
-            // every card in every section keeps decoding video at once (heat + lag).
-            .onScrollVisibilityChange(threshold: 0.05) { visible in
+            // Play only when the card is >60% on screen (not a mere 5%). This keeps
+            // the number of videos decoding at once well under the device's handful
+            // of hardware H.264 decoders, so the rest don't fall back to the (hot)
+            // software decoder. `.onScrollVisibilityChange` tracks real viewport
+            // visibility, so it works even in a plain (non-lazy) VStack where
+            // `.onDisappear` never fires.
+            .onScrollVisibilityChange(threshold: 0.6) { visible in
                 isVisible = visible
             }
     }
