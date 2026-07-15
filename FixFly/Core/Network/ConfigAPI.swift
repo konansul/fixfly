@@ -64,5 +64,5 @@ enum ConfigAPI {
 
     static let appStoreURL = "https://apps.apple.com/app/id\(appStoreID)"
 
-    static let tikTokURL: String? = "https://www.tiktok.com/@fixfly.ai"
+    static let tikTokURL: String? = "https://www.tiktok.com/@fixflyapp"
 }

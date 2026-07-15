@@ -105,9 +105,10 @@ struct HomeView: View {
                 }
                 .zIndex(1)
 
-                if vm.isLoading && vm.home == nil {
-                    ProgressView().tint(.white).zIndex(2)
-                }
+                // No overlay spinner: Home fills in progressively (hero + sections
+                // pop in as they load, the self-loading Photoshoot/Together rows
+                // appear on their own). A spinner here just kept spinning on top of
+                // already-loaded content until the server sections arrived.
             }
             .ignoresSafeArea()
             .safeAreaInset(edge: .bottom) {

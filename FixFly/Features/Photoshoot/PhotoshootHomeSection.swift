@@ -39,27 +39,10 @@ struct PhotoshootHomeSection: View {
                     }
                     .padding(.horizontal, 10)
                 }
-            } else if vm.isLoading {
-                // Keep the row present (and the task alive) while the catalog loads.
-                header
-                    .padding(.horizontal, 10)
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(0..<3, id: \.self) { _ in
-                            // Transparent placeholder, not a grey box (matches the
-                            // standard cards while they load).
-                            MediaLoadingPlaceholder()
-                                .frame(width: 150, height: 196)
-                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                                )
-                        }
-                    }
-                    .padding(.horizontal, 10)
-                }
             }
+            // No loading branch: the section (header + its See-all chevron) stays
+            // hidden until the catalog is ready, so nothing flashes over the Home
+            // while it loads. `.task` still fires — the VStack is a concrete container.
         }
         .task { await vm.load() }
     }
