@@ -17,6 +17,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         // template previews persist across launches instead of re-downloading.
         NetworkSession.configureSharedCache()
 
+        // Pull the backend URL from remote config as early as possible (best-effort,
+        // non-blocking) so the backend can move without an app update. Until this
+        // lands, ConfigAPI.baseURL serves the cached/fallback value.
+        Task { await ConfigAPI.refreshBaseURL() }
+
         // Force transparent nav + tab bars on every iOS version so the app's own
         // background shows through. Without this, iOS 26 defaults the bars to an
         // opaque dark fill (they look black), while older iOS renders them clear —
