@@ -12,6 +12,9 @@ final class MultipartAPI {
         accept: String = "image/*",
         requiresAuth: Bool = true
     ) async throws -> UIImage {
+        // Permission before the photo leaves the device (App Review 5.1.1(i)/5.1.2(i)).
+        try await AIConsentPresenter.shared.ensure()
+
         let request = try createMultipartRequest(
             endpointPath: endpointPath,
             image: image,
@@ -45,6 +48,9 @@ final class MultipartAPI {
         accept: String = "video/mp4",
         requiresAuth: Bool = true
     ) async throws -> URL {
+        // Permission before the photo leaves the device (App Review 5.1.1(i)/5.1.2(i)).
+        try await AIConsentPresenter.shared.ensure()
+
         let request = try createMultipartRequest(
             endpointPath: endpointPath,
             image: image,
@@ -87,7 +93,9 @@ final class MultipartAPI {
         extraFields: [String: String] = [:],
         requiresAuth: Bool = true
     ) async throws -> String {
-        
+        // Permission before the photo leaves the device (App Review 5.1.1(i)/5.1.2(i)).
+        try await AIConsentPresenter.shared.ensure()
+
         guard let url = URL(string: ConfigAPI.baseURL + endpointPath) else {
             throw ErrorAPI.badURL
         }
