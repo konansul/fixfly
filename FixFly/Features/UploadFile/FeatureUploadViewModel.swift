@@ -61,6 +61,9 @@ final class FeatureUploadViewModel: ObservableObject {
             self.resultUIImage = output
             self.isProcessing = false
             self.showResult = true
+        } catch is CancellationError {
+            // User declined the AI data-sharing consent — abort quietly.
+            self.isProcessing = false
         } catch {
             self.errorMessage = error.localizedDescription
             self.isProcessing = false

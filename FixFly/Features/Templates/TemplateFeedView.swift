@@ -552,6 +552,9 @@ struct TemplateFeedView: View {
                 isUploading = false
                 self.processingTaskId = taskId
             }
+        } catch is CancellationError {
+            // User declined the AI data-sharing consent — abort quietly.
+            await MainActor.run { isUploading = false }
         } catch {
             await MainActor.run {
                 isUploading = false

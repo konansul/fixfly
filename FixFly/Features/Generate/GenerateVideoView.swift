@@ -414,6 +414,9 @@ struct GenerateVideoFormView: View {
                     isGenerating = false
                     processingTaskId = generatedTaskId
                 }
+            } catch is CancellationError {
+                // User declined the AI data-sharing consent — abort quietly.
+                await MainActor.run { isGenerating = false }
             } catch {
                 await MainActor.run {
                     isGenerating = false

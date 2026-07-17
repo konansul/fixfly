@@ -4,9 +4,6 @@ struct AppLoadingView: View {
     @StateObject private var viewModel = AppLoadingViewModel()
 
     @AppStorage("onboarding_completed") private var onboardingCompleted = false
-    // Explicit AI data-sharing consent (App Review 5.1.1(i)/5.1.2(i)). Shown once,
-    // after onboarding, before the app can send any photo to an AI provider.
-    @AppStorage("ai_data_consent_v1") private var aiConsent = false
 
     @State private var logoScale: CGFloat = 0.94
     @State private var logoOpacity: Double = 0.85
@@ -18,22 +15,16 @@ struct AppLoadingView: View {
         // main app whether or not the user signed in. Sign in with Apple is
         // required only at a value action (Generate / Buy), gated there.
         if viewModel.isReady {
-            if !onboardingCompleted {
+            if onboardingCompleted {
+                MainTabView()
+                    .preferredColorScheme(.dark)
+                    .transition(.opacity)
+            } else {
                 OnboardingView {
                     withAnimation { onboardingCompleted = true }
                 }
                 .preferredColorScheme(.dark)
                 .transition(.opacity)
-            } else if !aiConsent {
-                // Explicit permission before any photo is sent to an AI provider.
-                AIConsentGateView {
-                    withAnimation { aiConsent = true }
-                }
-                .transition(.opacity)
-            } else {
-                MainTabView()
-                    .preferredColorScheme(.dark)
-                    .transition(.opacity)
             }
         } else {
             // Иначе показываем экран загрузки
