@@ -2,10 +2,14 @@
 //  AIDataDisclosureView.swift
 //  FixFly
 //
-//  In-app disclosure of what user data is sent to our third-party AI provider
-//  (Google Cloud Vertex AI) and what is not. Surfaced from Settings and from the
-//  generation screens so users can check, inside the app, exactly what is shared
-//  and with whom (App Review Guideline 2.1).
+//  In-app disclosure of what user data is sent to our third-party AI providers
+//  (Google Cloud Vertex AI, and Kling AI / Kuaishou for motion templates) and what
+//  is not. Surfaced from Settings and from the generation screens so users can
+//  check, inside the app, exactly what is shared and with whom (App Review 5.1.1).
+//
+//  The same content backs the one-time consent gate (AIConsentGateView), which
+//  turns this disclosure into an explicit "I Agree before your photo is sent" step
+//  — the permission App Review requires under Guidelines 5.1.1(i) / 5.1.2(i).
 //
 
 import SwiftUI
@@ -41,6 +45,13 @@ enum AIProvider: String {
         }
     }
 }
+
+/// Text for the "Who processes it" card when disclosing every provider at once
+/// (the one-time consent gate, which isn't tied to a single template).
+let allProvidersText =
+    "For most photos and videos, Google Cloud (Vertex AI) — Google's Gemini and Veo models. "
+    + "For certain motion and dance video effects, Kling AI, operated by Kuaishou Technology in China, "
+    + "because only Kling can copy a reference movement onto your photo."
 
 /// Compact, tappable chip shown next to a generation action: the provider's mark +
 /// the model that processes the request. Tapping opens the full disclosure.
@@ -97,64 +108,10 @@ struct AIDataDisclosureView: View {
                     .allowsHitTesting(false)
 
                 ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 18) {
-
-                        header
-
-                        card(
-                            icon: "paperplane",
-                            title: "What we send",
-                            text: "Only the content you choose for a generation: the photo(s) you select and the text prompt you type."
-                        )
-
-                        card(
-                            icon: "cpu",
-                            title: "Who processes it",
-                            text: provider.processorText
-                        )
-
-                        card(
-                            icon: "lock.shield",
-                            title: "What we don't send",
-                            text: "No account or identity data — no name, email, Apple ID or device identifiers are sent to \(provider.isGoogle ? "Google" : "Kling")."
-                        )
-
-                        card(
-                            icon: "hand.raised",
-                            title: "Not used for training",
-                            text: "Your photos and prompts are used solely to produce the result you requested. They are not used by us to train any models."
-                        )
-
-                        Button {
-                            UIApplication.shared.open(LegalLinks.privacyPolicy)
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "doc.text")
-                                    .font(.system(size: 15, weight: .semibold))
-                                Text("Read the full Privacy Policy")
-                                    .font(.system(size: 15, weight: .semibold))
-                                Spacer()
-                                Image(systemName: "arrow.up.right")
-                                    .font(.system(size: 13, weight: .bold))
-                                    .foregroundStyle(.white.opacity(0.4))
-                            }
-                            .foregroundStyle(.white)
-                            .padding(16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(Color.white.opacity(0.06))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .stroke(Color.white.opacity(0.10), lineWidth: 1)
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.top, 4)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 16)
-                    .padding(.bottom, 40)
+                    AIDisclosureContent(provider: provider)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
+                        .padding(.bottom, 40)
                 }
             }
             .navigationTitle("Data & AI")
@@ -170,6 +127,73 @@ struct AIDataDisclosureView: View {
                     }
                 }
             }
+        }
+    }
+}
+
+/// The scrollable body of the AI data disclosure. Shared by the read-only sheet
+/// (Settings + the generation footnote) and the one-time consent gate, so the copy
+/// the user agrees to and the copy they can re-read later never drift apart.
+struct AIDisclosureContent: View {
+    var provider: AIProvider = .gemini
+    /// Override the "Who processes it" card (the consent gate lists every provider,
+    /// not just the one behind a single template).
+    var whoText: String? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            header
+
+            card(
+                icon: "paperplane",
+                title: "What we send",
+                text: "Only the content you choose for a generation: the photo(s) you select and the text prompt you type."
+            )
+
+            card(
+                icon: "cpu",
+                title: "Who processes it",
+                text: whoText ?? provider.processorText
+            )
+
+            card(
+                icon: "lock.shield",
+                title: "What we don't send",
+                text: "No account or identity data — no name, email, Apple ID or device identifiers are sent to the AI providers."
+            )
+
+            card(
+                icon: "hand.raised",
+                title: "Not used for training",
+                text: "Your photos and prompts are used solely to produce the result you requested. They are not used by us to train any models."
+            )
+
+            Button {
+                UIApplication.shared.open(LegalLinks.privacyPolicy)
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "doc.text")
+                        .font(.system(size: 15, weight: .semibold))
+                    Text("Read the full Privacy Policy")
+                        .font(.system(size: 15, weight: .semibold))
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.4))
+                }
+                .foregroundStyle(.white)
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color.white.opacity(0.06))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 4)
         }
     }
 
