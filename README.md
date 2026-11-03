@@ -2,9 +2,9 @@
 
 A native iOS app that turns a single selfie into AI-generated photoshoots, stylised portraits and short videos.
 
-Pick a template, add one clear photo of your face, and the result comes back in seconds — ready to share. Built in Swift and SwiftUI, monetised with StoreKit, and powered by a FastAPI backend I also wrote.
+Pick a template, add one clear photo of your face, and the result comes back in seconds, ready to share. Built in Swift and SwiftUI, monetised with StoreKit, and powered by a FastAPI backend I also wrote.
 
-**Released on the App Store** — [apps.apple.com/us/app/fixfly-ai](https://apps.apple.com/us/app/fixfly-ai/id6777982481)
+**Was on the App Store in 2026, now taken down.**
 
 ## Screenshots
 
@@ -18,13 +18,13 @@ Pick a template, add one clear photo of your face, and the result comes back in 
 
 ## Features
 
-- **AI Photoshoot** — one selfie becomes a full set of matched studio-quality photos.
-- **Hundreds of templates** — portraits and avatars, anime and digital art, high-fashion editorial, cinematic action, fantasy, and retro looks, for both photos and video.
-- **Together** — merges two photos into one short video.
-- **Make Me Dance** — turns a still photo into a short dance clip.
-- **Library** — every generation is kept, with a before/after comparison view.
-- **Wallet and paywall** — auto-renewable weekly and monthly subscriptions plus consumable coin packs, with a welcome-bonus flow for new users.
-- **Sign in with Apple** — the only account step, with the session held in the Keychain.
+- **AI Photoshoot**: one selfie becomes a full set of matched studio-quality photos.
+- **Hundreds of templates**: portraits and avatars, anime and digital art, high-fashion editorial, cinematic action, fantasy, and retro looks, for both photos and video.
+- **Together**: merges two photos into one short video.
+- **Make Me Dance**: turns a still photo into a short dance clip.
+- **Library**: every generation is kept, with a before/after comparison view.
+- **Wallet and paywall**: auto-renewable weekly and monthly subscriptions plus consumable coin packs, with a welcome-bonus flow for new users.
+- **Sign in with Apple**: the only account step, with the session held in the Keychain.
 
 ## Architecture
 
@@ -43,14 +43,14 @@ Settings    Templates UploadFile Wallet     WelcomeBonus
 
 A hand-rolled client over `URLSession` rather than a third-party stack:
 
-- `ClientAPI` — typed JSON requests with `Codable` models and centralised error handling.
-- `MultipartAPI` — multipart photo upload with progress reporting.
-- `ConfigAPI` — resolves the backend base URL at launch and caches it, so the app can be pointed at a new host without a release.
+- `ClientAPI`: typed JSON requests with `Codable` models and centralised error handling.
+- `MultipartAPI`: multipart photo upload with progress reporting.
+- `ConfigAPI`: resolves the backend base URL at launch and caches it, so the app can be pointed at a new host without a release.
 - JWT stored in the Keychain through `TokenStore`, attached to every request, with `401` handled centrally.
 
 ### Generation pipeline
 
-Generation is asynchronous end to end. The app uploads the photo, the backend queues a job, and the processing screen polls for status — the first check after 10 seconds, then every 5 seconds — until the finished media lands in the Library. Because a generation can outlast the user's patience, the processing screen offers a "Notify me when ready" option backed by a local notification.
+Generation is asynchronous end to end. The app uploads the photo, the backend queues a job, and the processing screen polls for status, the first check after 10 seconds and then every 5 seconds, until the finished media lands in the Library. Because a generation can outlast the user's patience, the processing screen offers a "Notify me when ready" option backed by a local notification.
 
 ## Tech
 
@@ -59,7 +59,7 @@ Generation is asynchronous end to end. The app uploads the photo, the backend qu
 | Language & UI | Swift, SwiftUI, Swift Concurrency (async/await), Combine |
 | Architecture | MVVM, modular feature-based structure, reusable component library |
 | Networking | URLSession, Codable, multipart upload, JWT with Keychain storage |
-| Monetisation | StoreKit — auto-renewable subscriptions and consumable coin packs |
+| Monetisation | StoreKit: auto-renewable subscriptions and consumable coin packs |
 | System | AuthenticationServices (Sign in with Apple), UserNotifications, PhotosUI, AVKit, AppTrackingTransparency |
 | Analytics | Firebase Analytics, attribution SDK, Instruments profiling |
 | Backend | Python, FastAPI, PostgreSQL, deployed on Microsoft Azure |
